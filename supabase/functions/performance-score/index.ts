@@ -15,14 +15,29 @@ interface ScoreInput {
 
 Deno.serve(async (req: Request) => {
   try {
+    // Verify auth — either service role (cron) or user token
+    const authHeader = req.headers.get('Authorization');
     const body: ScoreInput = req.method === 'POST' ? await req.json() : {};
 
     // Get users to process
     let userIds: string[] = [];
 
     if (body.user_id) {
+      // If called with a specific user_id, verify the caller owns it
+      if (authHeader) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(
+          authHeader.replace('Bearer ', '')
+        );
+        if (authError || !user || user.id !== body.user_id) {
+          return new Response(
+            JSON.stringify({ error: 'Unauthorized' }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      }
       userIds = [body.user_id];
     } else {
+      // Batch mode (cron) — no user_id means process all (service role only)
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id');

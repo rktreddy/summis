@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/Colors';
 
 type SessionType = 'deep_work' | 'study' | 'creative' | 'admin';
+
+const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
 
 const PRESETS = [
   { label: '25 min', minutes: 25 },
@@ -31,6 +32,7 @@ export default function FocusScreen() {
   const [isBreak, setIsBreak] = useState(false);
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const handleCompleteRef = useRef<() => void>(() => {});
 
   const resetTimer = useCallback((minutes: number) => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -38,6 +40,51 @@ export default function FocusScreen() {
     setIsRunning(false);
     setStartedAt(null);
   }, []);
+
+  // Keep ref in sync with latest state
+  handleCompleteRef.current = async () => {
+    if (isBreak) {
+      setIsBreak(false);
+      resetTimer(duration);
+      return;
+    }
+
+    if (DEMO_MODE) {
+      const completed = sessionsCompleted + 1;
+      setSessionsCompleted(completed);
+      const breakMinutes = completed % 4 === 0 ? 15 : 5;
+      setIsBreak(true);
+      setSecondsLeft(breakMinutes * 60);
+      setIsRunning(false);
+      setStartedAt(null);
+      return;
+    }
+
+    if (!session?.user?.id || !startedAt) return;
+
+    try {
+      await supabase.from('focus_sessions').insert({
+        user_id: session.user.id,
+        duration_minutes: duration,
+        session_type: sessionType,
+        completed: true,
+        started_at: startedAt.toISOString(),
+        ended_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Error saving focus session:', err);
+      Alert.alert('Error', 'Failed to save focus session.');
+    }
+
+    const completed = sessionsCompleted + 1;
+    setSessionsCompleted(completed);
+
+    const breakMinutes = completed % 4 === 0 ? 15 : 5;
+    setIsBreak(true);
+    setSecondsLeft(breakMinutes * 60);
+    setIsRunning(false);
+    setStartedAt(null);
+  };
 
   useEffect(() => {
     return () => {
@@ -49,7 +96,7 @@ export default function FocusScreen() {
     if (secondsLeft <= 0 && isRunning) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setIsRunning(false);
-      handleComplete();
+      handleCompleteRef.current();
     }
   }, [secondsLeft, isRunning]);
 
@@ -72,39 +119,12 @@ export default function FocusScreen() {
     setIsRunning(false);
   }
 
-  async function handleComplete() {
-    if (isBreak) {
-      // Break is over, start next focus session
-      setIsBreak(false);
-      resetTimer(duration);
-      return;
-    }
-
-    if (!session?.user?.id || !startedAt) return;
-
-    await supabase.from('focus_sessions').insert({
-      user_id: session.user.id,
-      duration_minutes: duration,
-      session_type: sessionType,
-      completed: true,
-      started_at: startedAt.toISOString(),
-      ended_at: new Date().toISOString(),
-    });
-
-    const completed = sessionsCompleted + 1;
-    setSessionsCompleted(completed);
-
-    // Pomodoro: 5 min break, or 15 min break after every 4 sessions
-    const breakMinutes = completed % 4 === 0 ? 15 : 5;
-    setIsBreak(true);
-    setSecondsLeft(breakMinutes * 60);
-    setIsRunning(false);
-    setStartedAt(null);
-  }
-
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const progress = 1 - secondsLeft / (duration * 60);
+
+  // Interpolate border color opacity properly
+  const timerBorderColor = `rgba(124, 92, 252, ${progress.toFixed(2)})`;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -117,7 +137,11 @@ export default function FocusScreen() {
       </View>
 
       <View style={styles.timerContainer}>
-        <View style={[styles.timerRing, { borderColor: Colors.accent + Math.round(progress * 255).toString(16).padStart(2, '0') }]}>
+        <View
+          style={[styles.timerRing, { borderColor: timerBorderColor }]}
+          accessibilityLabel={`${minutes} minutes ${seconds} seconds remaining`}
+          accessibilityRole="timer"
+        >
           <Text style={styles.timerText}>
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </Text>

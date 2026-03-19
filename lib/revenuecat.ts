@@ -32,7 +32,8 @@ export async function checkProAccess(): Promise<boolean> {
     return (
       typeof customerInfo.entitlements.active[ENTITLEMENTS.pro] !== 'undefined'
     );
-  } catch {
+  } catch (err) {
+    console.error('RevenueCat checkProAccess failed:', err);
     return false;
   }
 }
@@ -44,7 +45,8 @@ export async function getOfferings(): Promise<PurchasesPackage[]> {
       return offerings.current.availablePackages;
     }
     return [];
-  } catch {
+  } catch (err) {
+    console.error('RevenueCat getOfferings failed:', err);
     return [];
   }
 }
@@ -58,10 +60,10 @@ export async function purchasePackage(
       typeof customerInfo.entitlements.active[ENTITLEMENTS.pro] !== 'undefined';
     return { success: isPro, customerInfo };
   } catch (e: unknown) {
-    const err = e as { userCancelled?: boolean };
-    if (err.userCancelled) {
+    if (e instanceof Error && 'userCancelled' in e && (e as Record<string, unknown>).userCancelled) {
       return { success: false };
     }
+    console.error('RevenueCat purchasePackage failed:', e);
     throw e;
   }
 }
@@ -72,7 +74,8 @@ export async function restorePurchases(): Promise<boolean> {
     return (
       typeof customerInfo.entitlements.active[ENTITLEMENTS.pro] !== 'undefined'
     );
-  } catch {
+  } catch (err) {
+    console.error('RevenueCat restorePurchases failed:', err);
     return false;
   }
 }

@@ -37,7 +37,7 @@ export default function InsightsScreen() {
     if (habits.length > 0) {
       computeAndSave();
     }
-  }, [habits.length > 0]);
+  }, [habits.length]);
 
   const handleRefresh = async () => {
     await fetchHabits();
@@ -76,9 +76,7 @@ export default function InsightsScreen() {
         <PaywallModal
           visible={showPaywall}
           onClose={() => setShowPaywall(false)}
-          onPurchased={() => {
-            // Profile will be refreshed by auth state listener
-          }}
+          onPurchased={() => { fetchHabits(); }}
         />
       </SafeAreaView>
     );

@@ -11,6 +11,14 @@ export const Colors = {
   inputBg: '#1A1A2E',
 } as const;
 
+export const CATEGORY_COLORS: Record<string, string> = {
+  focus: '#7C5CFC',
+  sleep: '#6366F1',
+  exercise: '#22C55E',
+  nutrition: '#F59E0B',
+  mindfulness: '#EC4899',
+};
+
 export default {
   light: {
     text: Colors.text,

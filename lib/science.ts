@@ -94,7 +94,7 @@ export function calculateStreak(completions: HabitCompletion[]): number {
   const completionDates = new Set(
     completions.map((c) => {
       const d = new Date(c.completed_at);
-      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
     })
   );
 
@@ -104,7 +104,7 @@ export function calculateStreak(completions: HabitCompletion[]): number {
   for (let d = 0; d < 365; d++) {
     const check = new Date(today);
     check.setDate(check.getDate() - d);
-    const key = `${check.getFullYear()}-${check.getMonth()}-${check.getDate()}`;
+    const key = `${check.getFullYear()}-${check.getMonth() + 1}-${check.getDate()}`;
 
     if (completionDates.has(key)) {
       streak++;

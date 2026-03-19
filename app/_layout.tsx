@@ -12,7 +12,7 @@ import 'react-native-reanimated';
 export { ErrorBoundary } from 'expo-router';
 
 // Set to true to skip auth and use mock data for demos
-const DEMO_MODE = !process.env.EXPO_PUBLIC_SUPABASE_URL;
+const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -74,14 +74,22 @@ export default function RootLayout() {
   }, []);
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, display_name, timezone, onboarding_completed, subscription_tier, created_at')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, timezone, onboarding_completed, subscription_tier, created_at')
+        .eq('id', userId)
+        .single();
 
-    if (data) {
-      setProfile(data);
+      if (error) {
+        console.error('Error fetching profile:', error.message);
+        return;
+      }
+      if (data) {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
     }
   }
 

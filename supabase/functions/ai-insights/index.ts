@@ -23,12 +23,30 @@ interface Insight {
 
 Deno.serve(async (req: Request) => {
   try {
+    // Verify auth token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { user_id }: InsightRequest = await req.json();
 
-    if (!user_id) {
+    if (!user_id || user_id !== user.id) {
       return new Response(
-        JSON.stringify({ error: 'user_id required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'user_id required and must match authenticated user' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

@@ -162,7 +162,7 @@ export default function TodayScreen() {
       <PaywallModal
         visible={showPaywall}
         onClose={() => setShowPaywall(false)}
-        onPurchased={() => {}}
+        onPurchased={() => { fetchHabits(); }}
       />
     </SafeAreaView>
   );

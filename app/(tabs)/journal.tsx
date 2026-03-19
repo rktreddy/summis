@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/useAppStore';
 import { MOCK_JOURNAL_ENTRIES } from '@/lib/mock-data';
@@ -19,7 +20,7 @@ import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/Colors';
 import type { JournalEntry } from '@/types';
 
-const DEMO_MODE = !process.env.EXPO_PUBLIC_SUPABASE_URL;
+const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
 const MOOD_EMOJIS = ['', '\uD83D\uDE29', '\uD83D\uDE1F', '\uD83D\uDE10', '\uD83D\uDE0A', '\uD83E\uDD29'];
 const ENERGY_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
 
@@ -67,14 +68,21 @@ export default function JournalScreen() {
       };
       setEntries((prev) => [newEntry, ...prev]);
     } else if (session?.user?.id) {
-      await supabase.from('journal_entries').insert({
-        user_id: session.user.id,
-        content: content.trim(),
-        mood,
-        energy_level: energy,
-        tags: [],
-      });
-      fetchEntries();
+      try {
+        const { error } = await supabase.from('journal_entries').insert({
+          user_id: session.user.id,
+          content: content.trim(),
+          mood,
+          energy_level: energy,
+          tags: [],
+        });
+        if (error) throw error;
+        fetchEntries();
+      } catch (err) {
+        console.error('Error saving journal entry:', err);
+        Alert.alert('Error', 'Failed to save journal entry. Please try again.');
+        return;
+      }
     }
 
     setContent('');

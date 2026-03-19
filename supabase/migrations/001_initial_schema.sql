@@ -84,30 +84,58 @@ alter table public.journal_entries enable row level security;
 alter table public.focus_sessions enable row level security;
 alter table public.performance_scores enable row level security;
 
--- RLS Policies: users can only access their own data
-create policy "Users own their profiles" on public.profiles
-  for all using (auth.uid() = id);
+-- RLS Policies: users can only read/update/delete their own data
+-- SELECT + UPDATE + DELETE
+create policy "Users read their profiles" on public.profiles
+  for select using (auth.uid() = id);
+create policy "Users update their profiles" on public.profiles
+  for update using (auth.uid() = id) with check (auth.uid() = id);
+create policy "Users insert their profiles" on public.profiles
+  for insert with check (auth.uid() = id);
 
-create policy "Users own their habits" on public.habits
-  for all using (auth.uid() = user_id);
+create policy "Users read their habits" on public.habits
+  for select using (auth.uid() = user_id);
+create policy "Users insert their habits" on public.habits
+  for insert with check (auth.uid() = user_id);
+create policy "Users update their habits" on public.habits
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users delete their habits" on public.habits
+  for delete using (auth.uid() = user_id);
 
-create policy "Users own their habit completions" on public.habit_completions
-  for all using (auth.uid() = user_id);
+create policy "Users read their habit completions" on public.habit_completions
+  for select using (auth.uid() = user_id);
+create policy "Users insert their habit completions" on public.habit_completions
+  for insert with check (auth.uid() = user_id);
+create policy "Users delete their habit completions" on public.habit_completions
+  for delete using (auth.uid() = user_id);
 
-create policy "Users own their journal entries" on public.journal_entries
-  for all using (auth.uid() = user_id);
+create policy "Users read their journal entries" on public.journal_entries
+  for select using (auth.uid() = user_id);
+create policy "Users insert their journal entries" on public.journal_entries
+  for insert with check (auth.uid() = user_id);
+create policy "Users update their journal entries" on public.journal_entries
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users delete their journal entries" on public.journal_entries
+  for delete using (auth.uid() = user_id);
 
-create policy "Users own their focus sessions" on public.focus_sessions
-  for all using (auth.uid() = user_id);
+create policy "Users read their focus sessions" on public.focus_sessions
+  for select using (auth.uid() = user_id);
+create policy "Users insert their focus sessions" on public.focus_sessions
+  for insert with check (auth.uid() = user_id);
 
-create policy "Users own their performance scores" on public.performance_scores
-  for all using (auth.uid() = user_id);
+create policy "Users read their performance scores" on public.performance_scores
+  for select using (auth.uid() = user_id);
+create policy "Users insert their performance scores" on public.performance_scores
+  for insert with check (auth.uid() = user_id);
+create policy "Users update their performance scores" on public.performance_scores
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Indexes for common queries
 create index if not exists idx_habits_user_id on public.habits(user_id);
+create index if not exists idx_habits_is_active on public.habits(is_active);
 create index if not exists idx_habit_completions_habit_id on public.habit_completions(habit_id);
-create index if not exists idx_habit_completions_user_id on public.habit_completions(user_id);
-create index if not exists idx_habit_completions_completed_at on public.habit_completions(completed_at);
+create index if not exists idx_habit_completions_user_completed on public.habit_completions(user_id, completed_at);
 create index if not exists idx_journal_entries_user_id on public.journal_entries(user_id);
 create index if not exists idx_focus_sessions_user_id on public.focus_sessions(user_id);
+create index if not exists idx_focus_sessions_completed on public.focus_sessions(completed);
 create index if not exists idx_performance_scores_user_id on public.performance_scores(user_id);

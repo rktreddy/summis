@@ -42,7 +42,7 @@ export default function ProfileScreen() {
         <Card style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {(profile?.display_name ?? '?')[0].toUpperCase()}
+              {(profile?.display_name || 'U')[0].toUpperCase()}
             </Text>
           </View>
           <Text style={styles.name}>{profile?.display_name ?? 'User'}</Text>
@@ -117,7 +117,7 @@ export default function ProfileScreen() {
       <PaywallModal
         visible={showPaywall}
         onClose={() => setShowPaywall(false)}
-        onPurchased={() => {}}
+        onPurchased={() => { /* Profile refreshed on next auth event */ }}
       />
     </SafeAreaView>
   );

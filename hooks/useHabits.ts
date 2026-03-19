@@ -4,7 +4,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { calculateStreak } from '@/lib/science';
 import type { Habit, HabitCompletion, HabitWithCompletions } from '@/types';
 
-const DEMO_MODE = !process.env.EXPO_PUBLIC_SUPABASE_URL;
+const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
 
 export function useHabits() {
   const { session, habits, setHabits, addHabit, removeHabit, updateHabitCompletions, isLoading, setIsLoading } =

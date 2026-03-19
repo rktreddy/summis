@@ -12,8 +12,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const ExpoSecureStoreAdapter = {
   getItem: async (key: string): Promise<string | null> => {
     if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        return localStorage.getItem(key);
+      try {
+        if (typeof localStorage !== 'undefined') {
+          return localStorage.getItem(key);
+        }
+      } catch {
+        // localStorage unavailable (SSR) or blocked
       }
       return null;
     }
@@ -21,8 +25,13 @@ const ExpoSecureStoreAdapter = {
   },
   setItem: async (key: string, value: string): Promise<void> => {
     if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, value);
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(key, value);
+        }
+      } catch {
+        // QuotaExceededError or localStorage blocked
+        console.warn('Failed to persist auth session to localStorage');
       }
       return;
     }
@@ -30,8 +39,12 @@ const ExpoSecureStoreAdapter = {
   },
   removeItem: async (key: string): Promise<void> => {
     if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(key);
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        // localStorage blocked
       }
       return;
     }

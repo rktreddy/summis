@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Button } from '@/components/ui/Button';
-import { Colors } from '@/constants/Colors';
+import { Colors, CATEGORY_COLORS } from '@/constants/Colors';
 
 interface HabitFormData {
   title: string;
@@ -16,11 +16,11 @@ interface HabitFormProps {
 }
 
 const CATEGORIES = [
-  { key: 'focus', label: 'Focus', color: '#7C5CFC' },
-  { key: 'sleep', label: 'Sleep', color: '#6366F1' },
-  { key: 'exercise', label: 'Exercise', color: '#22C55E' },
-  { key: 'nutrition', label: 'Nutrition', color: '#F59E0B' },
-  { key: 'mindfulness', label: 'Mindfulness', color: '#EC4899' },
+  { key: 'focus', label: 'Focus', color: CATEGORY_COLORS.focus },
+  { key: 'sleep', label: 'Sleep', color: CATEGORY_COLORS.sleep },
+  { key: 'exercise', label: 'Exercise', color: CATEGORY_COLORS.exercise },
+  { key: 'nutrition', label: 'Nutrition', color: CATEGORY_COLORS.nutrition },
+  { key: 'mindfulness', label: 'Mindfulness', color: CATEGORY_COLORS.mindfulness },
 ] as const;
 
 export function HabitForm({ onSubmit, onCancel }: HabitFormProps) {

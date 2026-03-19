@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Card } from '@/components/ui/Card';
-import { Colors } from '@/constants/Colors';
+import { Colors, CATEGORY_COLORS } from '@/constants/Colors';
 import type { HabitWithCompletions } from '@/types';
 import { useMemo } from 'react';
 
@@ -9,14 +9,6 @@ interface HabitCardProps {
   onToggle: () => void;
   onDelete: () => void;
 }
-
-const CATEGORY_COLORS: Record<string, string> = {
-  focus: '#7C5CFC',
-  sleep: '#6366F1',
-  exercise: '#22C55E',
-  nutrition: '#F59E0B',
-  mindfulness: '#EC4899',
-};
 
 export function HabitCard({ habit, onToggle, onDelete }: HabitCardProps) {
   const completedToday = useMemo(() => {
