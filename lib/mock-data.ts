@@ -1,0 +1,148 @@
+import type { Profile, HabitWithCompletions, JournalEntry, FocusSession } from '@/types';
+
+const now = new Date();
+const daysAgo = (d: number) => {
+  const date = new Date(now);
+  date.setDate(date.getDate() - d);
+  return date.toISOString();
+};
+
+export const MOCK_PROFILE: Profile = {
+  id: 'demo-user-001',
+  display_name: 'Alex',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  onboarding_completed: true,
+  subscription_tier: 'pro',
+  created_at: daysAgo(30),
+};
+
+export const MOCK_HABITS: HabitWithCompletions[] = [
+  {
+    id: 'h1',
+    user_id: 'demo-user-001',
+    title: 'Morning Meditation',
+    description: '10 minutes of mindful breathing',
+    science_note: 'Based on MBSR research by Jon Kabat-Zinn',
+    category: 'mindfulness',
+    frequency: 'daily',
+    target_time: '07:00',
+    color: '#EC4899',
+    icon: null,
+    is_active: true,
+    sort_order: 0,
+    created_at: daysAgo(21),
+    completions: [
+      { id: 'c1', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(0), note: null, quality_rating: 4 },
+      { id: 'c2', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(1), note: null, quality_rating: 5 },
+      { id: 'c3', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(2), note: null, quality_rating: 4 },
+      { id: 'c4', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(3), note: null, quality_rating: 3 },
+      { id: 'c5', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(4), note: null, quality_rating: 4 },
+      { id: 'c6', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(5), note: null, quality_rating: 5 },
+      { id: 'c7', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(6), note: null, quality_rating: 4 },
+      { id: 'c8', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(8), note: null, quality_rating: 4 },
+      { id: 'c9', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(9), note: null, quality_rating: 3 },
+      { id: 'c10', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(10), note: null, quality_rating: 5 },
+      { id: 'c11', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(11), note: null, quality_rating: 4 },
+      { id: 'c12', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(12), note: null, quality_rating: 4 },
+      { id: 'c13', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(13), note: null, quality_rating: 3 },
+      { id: 'c14', habit_id: 'h1', user_id: 'demo-user-001', completed_at: daysAgo(14), note: null, quality_rating: 5 },
+    ],
+    currentStreak: 7,
+  },
+  {
+    id: 'h2',
+    user_id: 'demo-user-001',
+    title: 'Deep Work Block',
+    description: '90-minute focused session',
+    science_note: 'Ultradian rhythm research by Peretz Lavie',
+    category: 'focus',
+    frequency: 'daily',
+    target_time: '09:30',
+    color: '#7C5CFC',
+    icon: null,
+    is_active: true,
+    sort_order: 1,
+    created_at: daysAgo(14),
+    completions: [
+      { id: 'c20', habit_id: 'h2', user_id: 'demo-user-001', completed_at: daysAgo(0), note: null, quality_rating: 5 },
+      { id: 'c21', habit_id: 'h2', user_id: 'demo-user-001', completed_at: daysAgo(1), note: null, quality_rating: 4 },
+      { id: 'c22', habit_id: 'h2', user_id: 'demo-user-001', completed_at: daysAgo(3), note: null, quality_rating: 4 },
+      { id: 'c23', habit_id: 'h2', user_id: 'demo-user-001', completed_at: daysAgo(4), note: null, quality_rating: 3 },
+      { id: 'c24', habit_id: 'h2', user_id: 'demo-user-001', completed_at: daysAgo(5), note: null, quality_rating: 5 },
+      { id: 'c25', habit_id: 'h2', user_id: 'demo-user-001', completed_at: daysAgo(7), note: null, quality_rating: 4 },
+      { id: 'c26', habit_id: 'h2', user_id: 'demo-user-001', completed_at: daysAgo(8), note: null, quality_rating: 4 },
+      { id: 'c27', habit_id: 'h2', user_id: 'demo-user-001', completed_at: daysAgo(10), note: null, quality_rating: 5 },
+    ],
+    currentStreak: 2,
+  },
+  {
+    id: 'h3',
+    user_id: 'demo-user-001',
+    title: 'Zone 2 Cardio',
+    description: '30 min easy jog or bike',
+    science_note: 'Voss et al. (2013) — exercise and hippocampal memory',
+    category: 'exercise',
+    frequency: 'daily',
+    target_time: '17:00',
+    color: '#22C55E',
+    icon: null,
+    is_active: true,
+    sort_order: 2,
+    created_at: daysAgo(10),
+    completions: [
+      { id: 'c30', habit_id: 'h3', user_id: 'demo-user-001', completed_at: daysAgo(1), note: null, quality_rating: 4 },
+      { id: 'c31', habit_id: 'h3', user_id: 'demo-user-001', completed_at: daysAgo(3), note: null, quality_rating: 5 },
+      { id: 'c32', habit_id: 'h3', user_id: 'demo-user-001', completed_at: daysAgo(5), note: null, quality_rating: 4 },
+      { id: 'c33', habit_id: 'h3', user_id: 'demo-user-001', completed_at: daysAgo(6), note: null, quality_rating: 3 },
+    ],
+    currentStreak: 0,
+  },
+];
+
+export const MOCK_JOURNAL_ENTRIES: JournalEntry[] = [
+  {
+    id: 'j1',
+    user_id: 'demo-user-001',
+    content: 'Great morning session today. Felt very focused after meditation — noticed the first 30 min of deep work were especially productive. The ultradian block approach is working well.',
+    mood: 5,
+    energy_level: 4,
+    tags: ['productive', 'focus'],
+    created_at: daysAgo(0),
+  },
+  {
+    id: 'j2',
+    user_id: 'demo-user-001',
+    content: 'Skipped the cardio today because of rain. Energy was lower in the afternoon. Need to find an indoor backup option.',
+    mood: 3,
+    energy_level: 3,
+    tags: ['exercise', 'energy'],
+    created_at: daysAgo(1),
+  },
+  {
+    id: 'j3',
+    user_id: 'demo-user-001',
+    content: 'Tried delaying caffeine until 10am as the protocol suggests. Surprisingly less jittery and the focus peak felt smoother and longer lasting.',
+    mood: 4,
+    energy_level: 5,
+    tags: ['caffeine', 'experiment'],
+    created_at: daysAgo(2),
+  },
+  {
+    id: 'j4',
+    user_id: 'demo-user-001',
+    content: 'Weekly review: 5/7 days of meditation completed, 4/7 deep work blocks. Consistency is improving. The streak protection notifications are genuinely helpful.',
+    mood: 4,
+    energy_level: 4,
+    tags: ['weekly-review'],
+    created_at: daysAgo(5),
+  },
+];
+
+export const MOCK_FOCUS_SESSIONS: FocusSession[] = [
+  { id: 'f1', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 1, quality_rating: 5, notes: null, started_at: daysAgo(0), ended_at: daysAgo(0) },
+  { id: 'f2', user_id: 'demo-user-001', duration_minutes: 45, session_type: 'study', completed: true, interruptions: 0, quality_rating: 4, notes: null, started_at: daysAgo(1), ended_at: daysAgo(1) },
+  { id: 'f3', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 2, quality_rating: 3, notes: null, started_at: daysAgo(2), ended_at: daysAgo(2) },
+  { id: 'f4', user_id: 'demo-user-001', duration_minutes: 25, session_type: 'creative', completed: true, interruptions: 0, quality_rating: 5, notes: null, started_at: daysAgo(3), ended_at: daysAgo(3) },
+  { id: 'f5', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 1, quality_rating: 4, notes: null, started_at: daysAgo(4), ended_at: daysAgo(4) },
+  { id: 'f6', user_id: 'demo-user-001', duration_minutes: 45, session_type: 'study', completed: true, interruptions: 0, quality_rating: 4, notes: null, started_at: daysAgo(5), ended_at: daysAgo(5) },
+];

@@ -39,3 +39,11 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Google Play service account
+google-service-account.json
+
+# Secrets
+.env
+.env.local
+.env.production

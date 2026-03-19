@@ -1,57 +1,112 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useFonts } from 'expo-font';
+import { StatusBar } from 'expo-status-bar';
+import { supabase } from '@/lib/supabase';
+import { initRevenueCat } from '@/lib/revenuecat';
+import { useAppStore } from '@/store/useAppStore';
+import { MOCK_PROFILE, MOCK_HABITS } from '@/lib/mock-data';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
+export { ErrorBoundary } from 'expo-router';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+// Set to true to skip auth and use mock data for demos
+const DEMO_MODE = !process.env.EXPO_PUBLIC_SUPABASE_URL;
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+function useProtectedRoute(session: { user: { id: string } } | null) {
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!session && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (session && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [session, segments]);
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const { session, setSession, setProfile, setHabits } = useAppStore();
+  const [isReady, setIsReady] = useState(false);
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    if (DEMO_MODE) {
+      // Demo mode: skip Supabase auth, load mock data
+      setSession({ user: { id: MOCK_PROFILE.id } });
+      setProfile(MOCK_PROFILE);
+      setHabits(MOCK_HABITS);
+      setIsReady(true);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s ? { user: { id: s.user.id } } : null);
+      if (s) {
+        fetchProfile(s.user.id);
+        initRevenueCat(s.user.id).catch(console.warn);
+      }
+      setIsReady(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s ? { user: { id: s.user.id } } : null);
+      if (s) {
+        fetchProfile(s.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function fetchProfile(userId: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, display_name, timezone, onboarding_completed, subscription_tier, created_at')
+      .eq('id', userId)
+      .single();
+
+    if (data) {
+      setProfile(data);
+    }
+  }
+
+  useEffect(() => {
+    if (loaded && isReady) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, isReady]);
 
-  if (!loaded) {
+  useProtectedRoute(session);
+
+  if (!loaded || !isReady) {
     return null;
   }
 
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+    <>
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="protocols" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="ai-insights" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="privacy-policy" options={{ presentation: 'modal' }} />
       </Stack>
-    </ThemeProvider>
+    </>
   );
 }
