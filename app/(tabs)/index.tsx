@@ -14,8 +14,10 @@ import { useAppStore } from '@/store/useAppStore';
 import { HabitCard } from '@/components/habits/HabitCard';
 import { HabitForm } from '@/components/habits/HabitForm';
 import { Card } from '@/components/ui/Card';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { PaywallModal } from '@/components/ui/PaywallModal';
 import { Colors } from '@/constants/Colors';
+import { isCompletedToday } from '@/lib/date-utils';
 import type { HabitWithCompletions } from '@/types';
 
 function getGreeting(): string {
@@ -30,6 +32,8 @@ export default function TodayScreen() {
     useHabits();
   const { canAddHabit } = useSubscription();
   const profile = useAppStore((s) => s.profile);
+  const error = useAppStore((s) => s.error);
+  const setError = useAppStore((s) => s.setError);
   const [showForm, setShowForm] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
@@ -38,20 +42,11 @@ export default function TodayScreen() {
   }, [fetchHabits]);
 
   const stats = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
     let completedCount = 0;
     let bestStreak = 0;
 
     for (const habit of habits) {
-      const done = habit.completions.some((c) => {
-        const t = new Date(c.completed_at).getTime();
-        return t >= today.getTime() && t < tomorrow.getTime();
-      });
-      if (done) completedCount++;
+      if (isCompletedToday(habit.completions)) completedCount++;
       if (habit.currentStreak > bestStreak) bestStreak = habit.currentStreak;
     }
 
@@ -115,6 +110,14 @@ export default function TodayScreen() {
           <Text style={styles.statLabel}>Best Streak</Text>
         </Card>
       </View>
+
+      {error && (
+        <ErrorBanner
+          message={error}
+          onRetry={() => { setError(null); fetchHabits(); }}
+          onDismiss={() => setError(null)}
+        />
+      )}
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Today's Habits</Text>

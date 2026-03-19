@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { HabitWithCompletions } from '@/types';
-import { calculateStreak } from '@/lib/science';
+import { isCompletedToday } from '@/lib/date-utils';
 
 export function useStreak(habit: HabitWithCompletions) {
   const currentStreak = habit.currentStreak;
@@ -33,17 +33,10 @@ export function useStreak(habit: HabitWithCompletions) {
     return longest;
   }, [habit.completions]);
 
-  const completedToday = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return habit.completions.some((c) => {
-      const t = new Date(c.completed_at).getTime();
-      return t >= today.getTime() && t < tomorrow.getTime();
-    });
-  }, [habit.completions]);
+  const completedToday = useMemo(
+    () => isCompletedToday(habit.completions),
+    [habit.completions]
+  );
 
   return { currentStreak, longestStreak, completedToday };
 }

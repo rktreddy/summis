@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Card } from '@/components/ui/Card';
 import { Colors, CATEGORY_COLORS } from '@/constants/Colors';
+import { isCompletedToday } from '@/lib/date-utils';
 import type { HabitWithCompletions } from '@/types';
 import { useMemo } from 'react';
 
@@ -11,17 +12,10 @@ interface HabitCardProps {
 }
 
 export function HabitCard({ habit, onToggle, onDelete }: HabitCardProps) {
-  const completedToday = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return habit.completions.some((c) => {
-      const t = new Date(c.completed_at).getTime();
-      return t >= today.getTime() && t < tomorrow.getTime();
-    });
-  }, [habit.completions]);
+  const completedToday = useMemo(
+    () => isCompletedToday(habit.completions),
+    [habit.completions]
+  );
 
   const handleLongPress = () => {
     Alert.alert(

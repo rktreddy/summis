@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/useAppStore';
+import { useData } from '@/lib/data-provider';
 import type { PerformanceScore } from '@/types';
 
 function getWeekStart(date: Date): string {
@@ -14,6 +14,7 @@ function getWeekStart(date: Date): string {
 export function usePerformanceScore() {
   const session = useAppStore((s) => s.session);
   const habits = useAppStore((s) => s.habits);
+  const data = useData();
   const [currentScore, setCurrentScore] = useState<PerformanceScore | null>(null);
   const [previousScore, setPreviousScore] = useState<PerformanceScore | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,7 +40,6 @@ export function usePerformanceScore() {
           const t = new Date(c.completed_at);
           return t >= sevenDaysAgo && t <= now;
         });
-        // Count unique days
         const uniqueDays = new Set(
           weekCompletions.map((c) => new Date(c.completed_at).toDateString())
         );
@@ -50,18 +50,11 @@ export function usePerformanceScore() {
         totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
 
       // Focus score: based on focus sessions this week
-      const { data: focusSessions } = await supabase
-        .from('focus_sessions')
-        .select('id, duration_minutes, completed')
-        .eq('user_id', userId)
-        .gte('started_at', sevenDaysAgo.toISOString())
-        .eq('completed', true);
-
-      const totalFocusMinutes = (focusSessions ?? []).reduce(
+      const focusSessions = await data.fetchFocusSessions(userId, sevenDaysAgo);
+      const totalFocusMinutes = focusSessions.reduce(
         (sum, s) => sum + s.duration_minutes,
         0
       );
-      // Target: 10 hours (600 min) per week = 100
       const focusScore = Math.min(100, Math.round((totalFocusMinutes / 600) * 100));
 
       // Consistency score: how many days this week had at least one habit completion
@@ -82,23 +75,12 @@ export function usePerformanceScore() {
       );
 
       // Upsert score
-      const { data: saved } = await supabase
-        .from('performance_scores')
-        .upsert(
-          {
-            user_id: userId,
-            week_start: weekStart,
-            overall_score: overallScore,
-            habit_score: habitScore,
-            focus_score: focusScore,
-            consistency_score: consistencyScore,
-          },
-          { onConflict: 'user_id,week_start' }
-        )
-        .select(
-          'id, user_id, week_start, overall_score, habit_score, focus_score, consistency_score, computed_at'
-        )
-        .single();
+      const saved = await data.upsertPerformanceScore(userId, weekStart, {
+        overall_score: overallScore,
+        habit_score: habitScore,
+        focus_score: focusScore,
+        consistency_score: consistencyScore,
+      });
 
       if (saved) {
         setCurrentScore(saved);
@@ -109,22 +91,14 @@ export function usePerformanceScore() {
       prevWeekDate.setDate(prevWeekDate.getDate() - 7);
       const prevWeekStart = getWeekStart(prevWeekDate);
 
-      const { data: prev } = await supabase
-        .from('performance_scores')
-        .select(
-          'id, user_id, week_start, overall_score, habit_score, focus_score, consistency_score, computed_at'
-        )
-        .eq('user_id', userId)
-        .eq('week_start', prevWeekStart)
-        .single();
-
-      setPreviousScore(prev ?? null);
+      const prev = await data.fetchPerformanceScore(userId, prevWeekStart);
+      setPreviousScore(prev);
     } catch (err) {
       console.error('Error computing performance score:', err);
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.id, habits]);
+  }, [session?.user?.id, habits, data]);
 
   const delta =
     currentScore?.overall_score != null && previousScore?.overall_score != null

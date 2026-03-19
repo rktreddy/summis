@@ -11,43 +11,43 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Alert } from 'react-native';
-import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/useAppStore';
-import { MOCK_JOURNAL_ENTRIES } from '@/lib/mock-data';
+import { useData } from '@/lib/data-provider';
 import { Button } from '@/components/ui/Button';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/Colors';
 import type { JournalEntry } from '@/types';
 
-const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
 const MOOD_EMOJIS = ['', '\uD83D\uDE29', '\uD83D\uDE1F', '\uD83D\uDE10', '\uD83D\uDE0A', '\uD83E\uDD29'];
 const ENERGY_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
 
 export default function JournalScreen() {
   const session = useAppStore((s) => s.session);
-  const [entries, setEntries] = useState<JournalEntry[]>(DEMO_MODE ? MOCK_JOURNAL_ENTRIES : []);
+  const data = useData();
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [content, setContent] = useState('');
   const [mood, setMood] = useState(3);
   const [energy, setEnergy] = useState(3);
 
   const fetchEntries = useCallback(async () => {
-    if (DEMO_MODE) return;
     if (!session?.user?.id) return;
     setLoading(true);
+    setError(null);
 
-    const { data } = await supabase
-      .from('journal_entries')
-      .select('id, user_id, content, mood, energy_level, tags, created_at')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    setEntries(data ?? []);
-    setLoading(false);
-  }, [session?.user?.id]);
+    try {
+      const result = await data.fetchJournalEntries(session.user.id);
+      setEntries(result);
+    } catch (err) {
+      console.error('Error fetching journal entries:', err);
+      setError('Failed to load entries. Pull down to retry.');
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.user?.id, data]);
 
   useEffect(() => {
     fetchEntries();
@@ -55,34 +55,24 @@ export default function JournalScreen() {
 
   const handleSave = async () => {
     if (!content.trim()) return;
+    if (!session?.user?.id) return;
 
-    if (DEMO_MODE) {
-      const newEntry: JournalEntry = {
-        id: `j-${Date.now()}`,
-        user_id: 'demo-user-001',
+    try {
+      const entry = await data.createJournalEntry(session.user.id, {
         content: content.trim(),
         mood,
         energy_level: energy,
         tags: [],
-        created_at: new Date().toISOString(),
-      };
-      setEntries((prev) => [newEntry, ...prev]);
-    } else if (session?.user?.id) {
-      try {
-        const { error } = await supabase.from('journal_entries').insert({
-          user_id: session.user.id,
-          content: content.trim(),
-          mood,
-          energy_level: energy,
-          tags: [],
-        });
-        if (error) throw error;
-        fetchEntries();
-      } catch (err) {
-        console.error('Error saving journal entry:', err);
-        Alert.alert('Error', 'Failed to save journal entry. Please try again.');
-        return;
+      });
+      if (entry) {
+        setEntries((prev) => [entry, ...prev]);
+      } else {
+        await fetchEntries();
       }
+    } catch (err) {
+      console.error('Error saving journal entry:', err);
+      setError('Failed to save journal entry. Please try again.');
+      return;
     }
 
     setContent('');
@@ -121,6 +111,14 @@ export default function JournalScreen() {
         <Text style={styles.title}>Journal</Text>
         <Text style={styles.subtitle}>{entries.length} entries</Text>
       </View>
+
+      {error && (
+        <ErrorBanner
+          message={error}
+          onRetry={() => { setError(null); fetchEntries(); }}
+          onDismiss={() => setError(null)}
+        />
+      )}
 
       <FlatList
         data={entries}

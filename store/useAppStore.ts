@@ -15,6 +15,9 @@ interface AppState {
 
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+
+  error: string | null;
+  setError: (error: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -39,4 +42,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   isLoading: false,
   setIsLoading: (isLoading) => set({ isLoading }),
+
+  error: null,
+  setError: (error) => set({ error }),
 }));

@@ -3,16 +3,13 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { supabase } from '@/lib/supabase';
 import { initRevenueCat } from '@/lib/revenuecat';
 import { useAppStore } from '@/store/useAppStore';
-import { MOCK_PROFILE, MOCK_HABITS } from '@/lib/mock-data';
+import { DataProviderRoot, useData } from '@/lib/data-provider';
+import { AppErrorBoundary } from '@/components/ErrorBoundary';
 import 'react-native-reanimated';
 
 export { ErrorBoundary } from 'expo-router';
-
-// Set to true to skip auth and use mock data for demos
-const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,28 +28,40 @@ function useProtectedRoute(session: { user: { id: string } } | null) {
   }, [session, segments]);
 }
 
-export default function RootLayout() {
+function RootLayoutInner() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
   const { session, setSession, setProfile, setHabits } = useAppStore();
   const [isReady, setIsReady] = useState(false);
+  const data = useData();
 
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (DEMO_MODE) {
-      // Demo mode: skip Supabase auth, load mock data
-      setSession({ user: { id: MOCK_PROFILE.id } });
-      setProfile(MOCK_PROFILE);
-      setHabits(MOCK_HABITS);
-      setIsReady(true);
+    if (data.isDemoMode) {
+      // Demo mode: load mock data via the provider
+      data.getSession().then((s) => {
+        setSession(s);
+        if (s) {
+          data.fetchProfile(s.user.id).then((p) => {
+            if (p) setProfile(p);
+          });
+          data.fetchHabits(s.user.id).then((h) => {
+            setHabits(h);
+          });
+        }
+        setIsReady(true);
+      });
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    // Real mode: use Supabase auth
+    const { supabase } = require('@/lib/supabase');
+
+    supabase.auth.getSession().then(({ data: { session: s } }: { data: { session: { user: { id: string } } | null } }) => {
       setSession(s ? { user: { id: s.user.id } } : null);
       if (s) {
         fetchProfile(s.user.id);
@@ -61,7 +70,7 @@ export default function RootLayout() {
       setIsReady(true);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, s: { user: { id: string } } | null) => {
       setSession(s ? { user: { id: s.user.id } } : null);
       if (s) {
         fetchProfile(s.user.id);
@@ -75,18 +84,15 @@ export default function RootLayout() {
 
   async function fetchProfile(userId: string) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, timezone, onboarding_completed, subscription_tier, created_at')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error.message);
-        return;
-      }
-      if (data) {
-        setProfile(data);
+      const profile = await data.fetchProfile(userId);
+      if (profile) {
+        setProfile(profile);
+      } else {
+        // Profile doesn't exist yet — create one
+        const newProfile = await data.createProfile(userId, 'User');
+        if (newProfile) {
+          setProfile(newProfile);
+        }
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -116,5 +122,15 @@ export default function RootLayout() {
         <Stack.Screen name="privacy-policy" options={{ presentation: 'modal' }} />
       </Stack>
     </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AppErrorBoundary>
+      <DataProviderRoot>
+        <RootLayoutInner />
+      </DataProviderRoot>
+    </AppErrorBoundary>
   );
 }

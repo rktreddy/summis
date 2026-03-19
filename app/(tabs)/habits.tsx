@@ -1,15 +1,19 @@
 import { useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, SafeAreaView } from 'react-native';
 import { useHabits } from '@/hooks/useHabits';
+import { useAppStore } from '@/store/useAppStore';
 import { HabitCard } from '@/components/habits/HabitCard';
 import { StreakRing } from '@/components/habits/StreakRing';
 import { Card } from '@/components/ui/Card';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Colors } from '@/constants/Colors';
 import { calculateConsistencyScore } from '@/lib/science';
 import type { HabitWithCompletions } from '@/types';
 
 export default function HabitsScreen() {
   const { habits, fetchHabits, toggleHabitCompletion, deleteHabit, isLoading } = useHabits();
+  const error = useAppStore((s) => s.error);
+  const setError = useAppStore((s) => s.setError);
 
   useEffect(() => {
     fetchHabits();
@@ -41,6 +45,14 @@ export default function HabitsScreen() {
         <Text style={styles.title}>All Habits</Text>
         <Text style={styles.subtitle}>{habits.length} active habits</Text>
       </View>
+
+      {error && (
+        <ErrorBanner
+          message={error}
+          onRetry={() => { setError(null); fetchHabits(); }}
+          onDismiss={() => setError(null)}
+        />
+      )}
 
       <FlatList
         data={habits}

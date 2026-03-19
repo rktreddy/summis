@@ -1,13 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
-import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/useAppStore';
+import { useData } from '@/lib/data-provider';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
 
 type SessionType = 'deep_work' | 'study' | 'creative' | 'admin';
-
-const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
 
 const PRESETS = [
   { label: '25 min', minutes: 25 },
@@ -24,6 +22,7 @@ const SESSION_TYPES: { key: SessionType; label: string }[] = [
 
 export default function FocusScreen() {
   const session = useAppStore((s) => s.session);
+  const data = useData();
   const [duration, setDuration] = useState(25);
   const [sessionType, setSessionType] = useState<SessionType>('deep_work');
   const [secondsLeft, setSecondsLeft] = useState(25 * 60);
@@ -49,31 +48,19 @@ export default function FocusScreen() {
       return;
     }
 
-    if (DEMO_MODE) {
-      const completed = sessionsCompleted + 1;
-      setSessionsCompleted(completed);
-      const breakMinutes = completed % 4 === 0 ? 15 : 5;
-      setIsBreak(true);
-      setSecondsLeft(breakMinutes * 60);
-      setIsRunning(false);
-      setStartedAt(null);
-      return;
-    }
-
-    if (!session?.user?.id || !startedAt) return;
-
-    try {
-      await supabase.from('focus_sessions').insert({
-        user_id: session.user.id,
-        duration_minutes: duration,
-        session_type: sessionType,
-        completed: true,
-        started_at: startedAt.toISOString(),
-        ended_at: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error('Error saving focus session:', err);
-      Alert.alert('Error', 'Failed to save focus session.');
+    if (session?.user?.id && startedAt) {
+      try {
+        await data.saveFocusSession(session.user.id, {
+          duration_minutes: duration,
+          session_type: sessionType,
+          completed: true,
+          started_at: startedAt.toISOString(),
+          ended_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('Error saving focus session:', err);
+        Alert.alert('Error', 'Failed to save focus session.');
+      }
     }
 
     const completed = sessionsCompleted + 1;

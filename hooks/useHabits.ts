@@ -1,73 +1,45 @@
 import { useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/useAppStore';
+import { useData } from '@/lib/data-provider';
 import { calculateStreak } from '@/lib/science';
-import type { Habit, HabitCompletion, HabitWithCompletions } from '@/types';
-
-const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
+import { isCompletedToday } from '@/lib/date-utils';
+import type { Habit, HabitCompletion } from '@/types';
 
 export function useHabits() {
-  const { session, habits, setHabits, addHabit, removeHabit, updateHabitCompletions, isLoading, setIsLoading } =
-    useAppStore();
+  const {
+    session,
+    habits,
+    setHabits,
+    addHabit,
+    removeHabit,
+    updateHabitCompletions,
+    isLoading,
+    setIsLoading,
+    setError,
+  } = useAppStore();
+  const data = useData();
 
   const userId = session?.user?.id;
 
   const fetchHabits = useCallback(async () => {
-    if (DEMO_MODE) return; // In demo mode, habits are set by _layout.tsx
+    if (data.isDemoMode) return; // In demo mode, habits are set by _layout.tsx
     if (!userId) return;
     setIsLoading(true);
+    setError(null);
 
     try {
-      const { data: habitsData, error: habitsError } = await supabase
-        .from('habits')
-        .select('id, user_id, title, description, science_note, category, frequency, target_time, color, icon, is_active, sort_order, created_at')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (habitsError) throw habitsError;
-      if (!habitsData) {
-        setHabits([]);
-        return;
-      }
-
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data: completionsData, error: completionsError } = await supabase
-        .from('habit_completions')
-        .select('id, habit_id, user_id, completed_at, note, quality_rating')
-        .eq('user_id', userId)
-        .gte('completed_at', thirtyDaysAgo.toISOString());
-
-      if (completionsError) throw completionsError;
-
-      const completionsByHabit = new Map<string, HabitCompletion[]>();
-      for (const c of completionsData ?? []) {
-        const existing = completionsByHabit.get(c.habit_id) ?? [];
-        existing.push(c);
-        completionsByHabit.set(c.habit_id, existing);
-      }
-
-      const habitsWithCompletions: HabitWithCompletions[] = habitsData.map((h: Habit) => {
-        const completions = completionsByHabit.get(h.id) ?? [];
-        return {
-          ...h,
-          completions,
-          currentStreak: calculateStreak(completions),
-        };
-      });
-
+      const habitsWithCompletions = await data.fetchHabits(userId);
       setHabits(habitsWithCompletions);
     } catch (err) {
       console.error('Error fetching habits:', err);
+      setError('Failed to load habits. Pull down to retry.');
     } finally {
       setIsLoading(false);
     }
-  }, [userId, setHabits, setIsLoading]);
+  }, [userId, data, setHabits, setIsLoading, setError]);
 
   const createHabit = useCallback(
-    async (data: {
+    async (input: {
       title: string;
       description?: string;
       category?: Habit['category'];
@@ -76,153 +48,82 @@ export function useHabits() {
       color?: string;
       icon?: string;
     }) => {
-      if (DEMO_MODE) {
-        const demoHabit: HabitWithCompletions = {
-          id: `h-${Date.now()}`,
-          user_id: 'demo-user-001',
-          title: data.title,
-          description: data.description ?? null,
-          science_note: data.science_note ?? null,
-          category: data.category ?? null,
-          frequency: 'daily',
-          target_time: data.target_time ?? null,
-          color: data.color ?? null,
-          icon: data.icon ?? null,
-          is_active: true,
-          sort_order: 0,
-          created_at: new Date().toISOString(),
-          completions: [],
-          currentStreak: 0,
-        };
-        addHabit(demoHabit);
-        return;
-      }
+      if (!userId && !data.isDemoMode) return;
 
-      if (!userId) return;
-
-      const { data: newHabit, error } = await supabase
-        .from('habits')
-        .insert({
-          user_id: userId,
-          title: data.title,
-          description: data.description ?? null,
-          category: data.category ?? null,
-          science_note: data.science_note ?? null,
-          target_time: data.target_time ?? null,
-          color: data.color ?? null,
-          icon: data.icon ?? null,
-        })
-        .select('id, user_id, title, description, science_note, category, frequency, target_time, color, icon, is_active, sort_order, created_at')
-        .single();
-
-      if (error) {
-        console.error('Error creating habit:', error);
-        throw error;
-      }
-
-      if (newHabit) {
-        addHabit({ ...newHabit, completions: [], currentStreak: 0 });
+      try {
+        const newHabit = await data.createHabit(userId ?? 'demo-user-001', input);
+        addHabit(newHabit);
+      } catch (err) {
+        console.error('Error creating habit:', err);
+        setError('Failed to create habit. Please try again.');
+        throw err;
       }
     },
-    [userId, addHabit]
+    [userId, data, addHabit, setError]
   );
 
   const deleteHabit = useCallback(
     async (id: string) => {
-      if (DEMO_MODE) {
+      try {
+        await data.deleteHabit(id);
         removeHabit(id);
-        return;
+      } catch (err) {
+        console.error('Error deleting habit:', err);
+        setError('Failed to delete habit. Please try again.');
+        throw err;
       }
-      const { error } = await supabase.from('habits').delete().eq('id', id);
-      if (error) {
-        console.error('Error deleting habit:', error);
-        throw error;
-      }
-      removeHabit(id);
     },
-    [removeHabit]
+    [data, removeHabit, setError]
   );
 
   const toggleHabitCompletion = useCallback(
     async (habitId: string) => {
-      if (DEMO_MODE) {
-        // Toggle locally in demo mode
-        const habit = habits.find((h) => h.id === habitId);
-        if (!habit) return;
+      if (!userId && !data.isDemoMode) return;
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+      const habit = habits.find((h) => h.id === habitId);
+      if (!habit) return;
 
-        const todayCompletion = habit.completions.find((c) => {
-          const t = new Date(c.completed_at).getTime();
-          return t >= today.getTime() && t < tomorrow.getTime();
-        });
-
-        let newCompletions;
-        if (todayCompletion) {
-          newCompletions = habit.completions.filter((c) => c.id !== todayCompletion.id);
-        } else {
-          newCompletions = [
+      // Optimistic update: toggle UI immediately
+      const wasCompleted = isCompletedToday(habit.completions);
+      const optimisticCompletions = wasCompleted
+        ? habit.completions.filter((c) => {
+            const t = new Date(c.completed_at);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return !(t.getTime() >= today.getTime() && t.getTime() < tomorrow.getTime());
+          })
+        : [
             ...habit.completions,
             {
-              id: `c-${Date.now()}`,
+              id: `temp-${Date.now()}`,
               habit_id: habitId,
-              user_id: 'demo-user-001',
+              user_id: userId ?? 'demo-user-001',
               completed_at: new Date().toISOString(),
               note: null,
               quality_rating: null,
-            },
+            } as HabitCompletion,
           ];
-        }
-        updateHabitCompletions(habitId, newCompletions, calculateStreak(newCompletions));
-        return;
+
+      const optimisticStreak = calculateStreak(optimisticCompletions);
+      updateHabitCompletions(habitId, optimisticCompletions, optimisticStreak);
+
+      try {
+        const updatedCompletions = await data.toggleCompletion(
+          habitId,
+          userId ?? 'demo-user-001',
+          habit.completions
+        );
+        updateHabitCompletions(habitId, updatedCompletions, calculateStreak(updatedCompletions));
+      } catch (err) {
+        // Roll back optimistic update
+        console.error('Error toggling habit completion:', err);
+        updateHabitCompletions(habitId, habit.completions, habit.currentStreak);
+        setError('Failed to save. Please try again.');
       }
-
-      if (!userId) return;
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      // Check if already completed today
-      const { data: existing } = await supabase
-        .from('habit_completions')
-        .select('id')
-        .eq('habit_id', habitId)
-        .eq('user_id', userId)
-        .gte('completed_at', today.toISOString())
-        .lt('completed_at', tomorrow.toISOString())
-        .limit(1);
-
-      if (existing && existing.length > 0) {
-        // Remove today's completion
-        await supabase.from('habit_completions').delete().eq('id', existing[0].id);
-      } else {
-        // Add completion
-        await supabase.from('habit_completions').insert({
-          habit_id: habitId,
-          user_id: userId,
-        });
-      }
-
-      // Refetch completions for this habit
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data: completions } = await supabase
-        .from('habit_completions')
-        .select('id, habit_id, user_id, completed_at, note, quality_rating')
-        .eq('habit_id', habitId)
-        .eq('user_id', userId)
-        .gte('completed_at', thirtyDaysAgo.toISOString());
-
-      const updatedCompletions = completions ?? [];
-      updateHabitCompletions(habitId, updatedCompletions, calculateStreak(updatedCompletions));
     },
-    [userId, habits, updateHabitCompletions]
+    [userId, data, habits, updateHabitCompletions, setError]
   );
 
   return { habits, fetchHabits, createHabit, deleteHabit, toggleHabitCompletion, isLoading };
