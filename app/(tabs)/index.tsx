@@ -18,9 +18,10 @@ import { HabitForm } from '@/components/habits/HabitForm';
 import { Card } from '@/components/ui/Card';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { PaywallModal } from '@/components/ui/PaywallModal';
+import { DailyTimeline } from '@/components/insights/DailyTimeline';
 import { Colors } from '@/constants/Colors';
 import { isCompletedToday } from '@/lib/date-utils';
-import type { HabitWithCompletions } from '@/types';
+import type { HabitWithCompletions, Chronotype } from '@/types';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -119,6 +120,15 @@ export default function TodayScreen() {
         </Card>
       </View>
 
+      {profile?.wake_time && profile?.chronotype && (
+        <View style={styles.timelineWrap}>
+          <DailyTimeline
+            wakeTime={profile.wake_time}
+            chronotype={profile.chronotype as Chronotype}
+          />
+        </View>
+      )}
+
       {error && (
         <ErrorBanner
           message={error}
@@ -211,6 +221,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginTop: 4,
+  },
+  timelineWrap: {
+    paddingHorizontal: 20,
+    marginBottom: 4,
   },
   statsRow: {
     flexDirection: 'row',

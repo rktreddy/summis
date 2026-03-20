@@ -1,11 +1,15 @@
 export type UserGoal = 'focus' | 'sleep' | 'fitness' | 'general';
 
+export type Chronotype = 'early' | 'moderate' | 'late';
+
 export interface Profile {
   id: string;
   display_name: string | null;
   timezone: string;
   onboarding_completed: boolean;
   user_goal: UserGoal | null;
+  wake_time: string | null;
+  chronotype: Chronotype | null;
   subscription_tier: 'free' | 'pro' | 'lifetime';
   created_at: string;
 }

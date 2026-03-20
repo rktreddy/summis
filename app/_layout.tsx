@@ -27,8 +27,9 @@ function useProtectedRoute(
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
-      // After login, check if onboarding is needed
-      if (profile && !profile.onboarding_completed) {
+      // After login, wait for profile to load before deciding
+      if (!profile) return; // Profile still loading — don't redirect yet
+      if (!profile.onboarding_completed) {
         router.replace('/onboarding');
       } else {
         router.replace('/(tabs)');

@@ -100,7 +100,7 @@ Deno.serve(async (req: Request) => {
         mood: e.mood,
         energy: e.energy_level,
         date: e.created_at,
-        snippet: e.content.substring(0, 200),
+        word_count: e.content.split(/\s+/).length,
       })),
       focus_sessions: {
         total: (focusRes.data ?? []).length,

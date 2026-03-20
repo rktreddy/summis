@@ -13,6 +13,8 @@ export const MOCK_PROFILE: Profile = {
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   onboarding_completed: true,
   user_goal: 'focus',
+  wake_time: '07:00',
+  chronotype: 'moderate',
   subscription_tier: 'pro',
   created_at: daysAgo(30),
 };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,17 @@ import { useAppStore } from '@/store/useAppStore';
 import { useHabits } from '@/hooks/useHabits';
 import { usePerformanceScore } from '@/hooks/usePerformanceScore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useData } from '@/lib/data-provider';
+import { computeMultipliers } from '@/lib/multiplier';
 import { WeeklyReport } from '@/components/insights/WeeklyReport';
 import { PerformanceChart } from '@/components/insights/PerformanceChart';
 import { HabitCompletionChart } from '@/components/insights/HabitCompletionChart';
+import { MultiplierStack } from '@/components/insights/MultiplierStack';
 import { PaywallModal } from '@/components/ui/PaywallModal';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/Colors';
+import type { FocusSession } from '@/types';
 
 export default function InsightsScreen() {
   const router = useRouter();
@@ -27,7 +31,10 @@ export default function InsightsScreen() {
   const { currentScore, previousScore, delta, computeAndSave, loading } =
     usePerformanceScore();
   const { isPro } = useSubscription();
+  const session = useAppStore((s) => s.session);
+  const dataProvider = useData();
   const [showPaywall, setShowPaywall] = useState(false);
+  const [focusSessions, setFocusSessions] = useState<FocusSession[]>([]);
 
   useEffect(() => {
     fetchHabits();
@@ -39,9 +46,31 @@ export default function InsightsScreen() {
     }
   }, [habits.length]);
 
+  useEffect(() => {
+    if (session?.user?.id && isPro) {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      dataProvider.fetchFocusSessions(session.user.id, thirtyDaysAgo)
+        .then(setFocusSessions)
+        .catch(() => {});
+    }
+  }, [session?.user?.id, isPro]);
+
+  const multiplierResult = useMemo(
+    () => computeMultipliers(habits, focusSessions),
+    [habits, focusSessions]
+  );
+
   const handleRefresh = async () => {
     await fetchHabits();
     await computeAndSave();
+    if (session?.user?.id) {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      dataProvider.fetchFocusSessions(session.user.id, thirtyDaysAgo)
+        .then(setFocusSessions)
+        .catch(() => {});
+    }
   };
 
   if (!isPro) {
@@ -114,6 +143,10 @@ export default function InsightsScreen() {
             delta={delta}
           />
         )}
+
+        <View style={styles.section}>
+          <MultiplierStack result={multiplierResult} />
+        </View>
 
         <View style={styles.section}>
           {chartData.length > 0 && (

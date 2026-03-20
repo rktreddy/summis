@@ -33,7 +33,7 @@ export interface DataProvider {
   // Profile updates
   updateProfile(
     userId: string,
-    updates: { onboarding_completed?: boolean; user_goal?: string }
+    updates: { onboarding_completed?: boolean; user_goal?: string; wake_time?: string; chronotype?: string }
   ): Promise<void>;
 
   // Habits
@@ -52,7 +52,7 @@ export interface DataProvider {
       trigger_cue?: string;
     }
   ): Promise<HabitWithCompletions>;
-  deleteHabit(id: string): Promise<void>;
+  deleteHabit(id: string, userId?: string): Promise<void>;
   toggleCompletion(
     habitId: string,
     userId: string,
@@ -106,7 +106,12 @@ const supabaseProvider: DataProvider = {
       .eq('id', userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return data;
+    if (!data) return null;
+    return {
+      ...data,
+      wake_time: (data as Partial<Profile>).wake_time ?? null,
+      chronotype: (data as Partial<Profile>).chronotype ?? null,
+    } as Profile;
   },
 
   async createProfile(userId, displayName) {
@@ -120,7 +125,7 @@ const supabaseProvider: DataProvider = {
       .select('id, display_name, timezone, onboarding_completed, user_goal, subscription_tier, created_at')
       .single();
     if (error) throw new Error(error.message);
-    return data;
+    return data ? { ...data, wake_time: null, chronotype: null } as Profile : null;
   },
 
   async updateProfile(userId, updates) {
@@ -207,12 +212,14 @@ const supabaseProvider: DataProvider = {
     const todayCompletion = findTodayCompletion(currentCompletions);
 
     if (todayCompletion) {
-      await supabase.from('habit_completions').delete().eq('id', todayCompletion.id);
+      const { error: delError } = await supabase.from('habit_completions').delete().eq('id', todayCompletion.id);
+      if (delError) throw new Error(delError.message);
     } else {
-      await supabase.from('habit_completions').insert({
+      const { error: insError } = await supabase.from('habit_completions').insert({
         habit_id: habitId,
         user_id: userId,
       });
+      if (insError) throw new Error(insError.message);
     }
 
     // Refetch completions for this habit
@@ -230,12 +237,13 @@ const supabaseProvider: DataProvider = {
   },
 
   async fetchJournalEntries(userId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('journal_entries')
       .select('id, user_id, content, mood, energy_level, tags, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50);
+    if (error) throw new Error(error.message);
     return (data ?? []).map((e) => ({ ...e, journal_mode: (e as Partial<JournalEntry>).journal_mode ?? 'free' })) as JournalEntry[];
   },
 
@@ -252,6 +260,22 @@ const supabaseProvider: DataProvider = {
       })
       .select('id, user_id, content, mood, energy_level, tags, created_at')
       .single();
+    // Retry without journal_mode if the column doesn't exist yet
+    if (error?.message?.includes('journal_mode')) {
+      const { data: retryEntry, error: retryError } = await supabase
+        .from('journal_entries')
+        .insert({
+          user_id: userId,
+          content: data.content,
+          mood: data.mood,
+          energy_level: data.energy_level,
+          tags: data.tags,
+        })
+        .select('id, user_id, content, mood, energy_level, tags, created_at')
+        .single();
+      if (retryError) throw new Error(retryError.message);
+      return retryEntry ? { ...retryEntry, journal_mode: data.journal_mode ?? 'free' } as JournalEntry : null;
+    }
     if (error) throw new Error(error.message);
     return entry ? { ...entry, journal_mode: data.journal_mode ?? 'free' } as JournalEntry : null;
   },
@@ -285,17 +309,21 @@ const supabaseProvider: DataProvider = {
   },
 
   async fetchFocusSessions(userId, since) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('focus_sessions')
       .select('id, duration_minutes, completed, user_id, session_type, interruptions, quality_rating, notes, started_at, ended_at')
       .eq('user_id', userId)
       .gte('started_at', since.toISOString())
       .eq('completed', true);
-    return (data ?? []) as FocusSession[];
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((s) => ({
+      ...s,
+      interruption_types: (s as Partial<FocusSession>).interruption_types ?? [],
+    })) as FocusSession[];
   },
 
   async upsertPerformanceScore(userId, weekStart, scores) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('performance_scores')
       .upsert(
         { user_id: userId, week_start: weekStart, ...scores },
@@ -303,16 +331,18 @@ const supabaseProvider: DataProvider = {
       )
       .select('id, user_id, week_start, overall_score, habit_score, focus_score, consistency_score, computed_at')
       .single();
+    if (error) throw new Error(error.message);
     return data;
   },
 
   async fetchPerformanceScore(userId, weekStart) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('performance_scores')
       .select('id, user_id, week_start, overall_score, habit_score, focus_score, consistency_score, computed_at')
       .eq('user_id', userId)
       .eq('week_start', weekStart)
-      .single();
+      .maybeSingle();
+    if (error) throw new Error(error.message);
     return data ?? null;
   },
 };

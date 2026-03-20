@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { Button } from '@/components/ui/Button';
@@ -64,7 +64,11 @@ export default function FocusScreen() {
         });
       } catch (err) {
         console.error('Error saving focus session:', err);
-        Alert.alert('Error', 'Failed to save focus session.');
+        if (Platform.OS === 'web') {
+          alert('Failed to save focus session.');
+        } else {
+          Alert.alert('Error', 'Failed to save focus session.');
+        }
       }
     }
 
