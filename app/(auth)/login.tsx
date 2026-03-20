@@ -91,6 +91,8 @@ export default function LoginScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          returnKeyType="next"
+          blurOnSubmit={false}
           accessibilityLabel="Email address"
         />
 
@@ -101,6 +103,8 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          returnKeyType="go"
+          onSubmitEditing={handleLogin}
           accessibilityLabel="Password"
         />
 

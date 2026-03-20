@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   Modal,
   SafeAreaView,
+  Share,
 } from 'react-native';
 import { useHabits } from '@/hooks/useHabits';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAppStore } from '@/store/useAppStore';
+import { StreakShareCard } from '@/components/social/StreakShareCard';
 import { HabitCard } from '@/components/habits/HabitCard';
 import { HabitForm } from '@/components/habits/HabitForm';
 import { Card } from '@/components/ui/Card';
@@ -34,6 +36,8 @@ export default function TodayScreen() {
   const profile = useAppStore((s) => s.profile);
   const error = useAppStore((s) => s.error);
   const setError = useAppStore((s) => s.setError);
+  const milestoneHabit = useAppStore((s) => s.milestoneHabit);
+  const setMilestoneHabit = useAppStore((s) => s.setMilestoneHabit);
   const [showForm, setShowForm] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
@@ -58,12 +62,16 @@ export default function TodayScreen() {
     description?: string;
     category?: string | null;
     science_note?: string;
+    difficulty?: 'easy' | 'moderate' | 'hard';
+    trigger_cue?: string;
   }) => {
     try {
       await createHabit({
         title: data.title,
         description: data.description,
         category: data.category as HabitWithCompletions['category'],
+        difficulty: data.difficulty,
+        trigger_cue: data.trigger_cue,
       });
       setShowForm(false);
     } catch {
@@ -167,6 +175,20 @@ export default function TodayScreen() {
         onClose={() => setShowPaywall(false)}
         onPurchased={() => { fetchHabits(); }}
       />
+
+      {milestoneHabit && (
+        <StreakShareCard
+          streakCount={milestoneHabit.streak}
+          habitName={milestoneHabit.habitName}
+          onShare={async () => {
+            await Share.share({
+              message: `I just hit a ${milestoneHabit.streak}-day streak on ${milestoneHabit.habitName} with 1000x! \uD83D\uDD25`,
+            });
+            setMilestoneHabit(null);
+          }}
+          onDismiss={() => setMilestoneHabit(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }

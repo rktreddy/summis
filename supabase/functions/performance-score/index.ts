@@ -52,14 +52,14 @@ Deno.serve(async (req: Request) => {
     const results = [];
 
     for (const userId of userIds) {
-      // Fetch habits
+      // Fetch habits with difficulty
       const { data: habits } = await supabase
         .from('habits')
-        .select('id')
+        .select('id, difficulty')
         .eq('user_id', userId)
         .eq('is_active', true);
 
-      const habitIds = (habits ?? []).map((h: { id: string }) => h.id);
+      const DIFFICULTY_WEIGHTS: Record<string, number> = { easy: 0.5, moderate: 1.0, hard: 1.5 };
 
       // Fetch completions
       const { data: completions } = await supabase
@@ -68,24 +68,27 @@ Deno.serve(async (req: Request) => {
         .eq('user_id', userId)
         .gte('completed_at', sevenDaysAgo.toISOString());
 
-      // Habit score
-      const totalPossible = habitIds.length * 7;
-      let totalCompleted = 0;
+      // Habit score: difficulty-weighted
+      let weightedCompleted = 0;
+      let weightedPossible = 0;
 
-      for (const habitId of habitIds) {
+      for (const habit of habits ?? []) {
+        const weight = DIFFICULTY_WEIGHTS[(habit as { difficulty: string }).difficulty] ?? 1.0;
+        weightedPossible += weight * 7;
+
         const habitCompletions = (completions ?? []).filter(
-          (c: { habit_id: string }) => c.habit_id === habitId
+          (c: { habit_id: string }) => c.habit_id === (habit as { id: string }).id
         );
         const uniqueDays = new Set(
           habitCompletions.map((c: { completed_at: string }) =>
             new Date(c.completed_at).toDateString()
           )
         );
-        totalCompleted += uniqueDays.size;
+        weightedCompleted += uniqueDays.size * weight;
       }
 
       const habitScore =
-        totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+        weightedPossible > 0 ? Math.round((weightedCompleted / weightedPossible) * 100) : 0;
 
       // Focus score
       const { data: sessions } = await supabase

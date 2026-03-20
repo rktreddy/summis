@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'r
 import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { Button } from '@/components/ui/Button';
+import { InterruptionLogger } from '@/components/focus/InterruptionLogger';
 import { Colors } from '@/constants/Colors';
 
 type SessionType = 'deep_work' | 'study' | 'creative' | 'admin';
@@ -30,6 +31,8 @@ export default function FocusScreen() {
   const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [isBreak, setIsBreak] = useState(false);
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
+  const [interruptionTypes, setInterruptionTypes] = useState<string[]>([]);
+  const [showInterruptionLogger, setShowInterruptionLogger] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const handleCompleteRef = useRef<() => void>(() => {});
 
@@ -38,6 +41,7 @@ export default function FocusScreen() {
     setSecondsLeft(minutes * 60);
     setIsRunning(false);
     setStartedAt(null);
+    setInterruptionTypes([]);
   }, []);
 
   // Keep ref in sync with latest state
@@ -56,6 +60,7 @@ export default function FocusScreen() {
           completed: true,
           started_at: startedAt.toISOString(),
           ended_at: new Date().toISOString(),
+          interruption_types: interruptionTypes,
         });
       } catch (err) {
         console.error('Error saving focus session:', err);
@@ -104,6 +109,14 @@ export default function FocusScreen() {
   function pauseTimer() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsRunning(false);
+    if (!isBreak) {
+      setShowInterruptionLogger(true);
+    }
+  }
+
+  function handleLogInterruption(type: string) {
+    setInterruptionTypes((prev) => [...prev, type]);
+    setShowInterruptionLogger(false);
   }
 
   const minutes = Math.floor(secondsLeft / 60);
@@ -191,6 +204,11 @@ export default function FocusScreen() {
           disabled={secondsLeft === duration * 60 && !isRunning}
         />
       </View>
+      <InterruptionLogger
+        visible={showInterruptionLogger}
+        onLog={handleLogInterruption}
+        onDismiss={() => setShowInterruptionLogger(false)}
+      />
     </SafeAreaView>
   );
 }

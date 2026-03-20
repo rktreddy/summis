@@ -30,6 +30,12 @@ export interface DataProvider {
   fetchProfile(userId: string): Promise<Profile | null>;
   createProfile(userId: string, displayName: string): Promise<Profile | null>;
 
+  // Profile updates
+  updateProfile(
+    userId: string,
+    updates: { onboarding_completed?: boolean; user_goal?: string }
+  ): Promise<void>;
+
   // Habits
   fetchHabits(userId: string): Promise<HabitWithCompletions[]>;
   createHabit(
@@ -42,6 +48,8 @@ export interface DataProvider {
       target_time?: string;
       color?: string;
       icon?: string;
+      difficulty?: Habit['difficulty'];
+      trigger_cue?: string;
     }
   ): Promise<HabitWithCompletions>;
   deleteHabit(id: string): Promise<void>;
@@ -55,7 +63,7 @@ export interface DataProvider {
   fetchJournalEntries(userId: string): Promise<JournalEntry[]>;
   createJournalEntry(
     userId: string,
-    data: { content: string; mood: number; energy_level: number; tags: string[] }
+    data: { content: string; mood: number; energy_level: number; tags: string[]; journal_mode?: string }
   ): Promise<JournalEntry | null>;
 
   // Focus
@@ -67,6 +75,7 @@ export interface DataProvider {
       completed: boolean;
       started_at: string;
       ended_at: string;
+      interruption_types?: string[];
     }
   ): Promise<void>;
 
@@ -93,7 +102,7 @@ const supabaseProvider: DataProvider = {
   async fetchProfile(userId) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, display_name, timezone, onboarding_completed, subscription_tier, created_at')
+      .select('id, display_name, timezone, onboarding_completed, user_goal, subscription_tier, created_at')
       .eq('id', userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -108,10 +117,18 @@ const supabaseProvider: DataProvider = {
         display_name: displayName,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
-      .select('id, display_name, timezone, onboarding_completed, subscription_tier, created_at')
+      .select('id, display_name, timezone, onboarding_completed, user_goal, subscription_tier, created_at')
       .single();
     if (error) throw new Error(error.message);
     return data;
+  },
+
+  async updateProfile(userId, updates) {
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId);
+    if (error) throw new Error(error.message);
   },
 
   async fetchHabits(userId) {
@@ -143,9 +160,15 @@ const supabaseProvider: DataProvider = {
       completionsByHabit.set(c.habit_id, existing);
     }
 
-    return habitsData.map((h: Habit) => {
+    return habitsData.map((h) => {
       const completions = completionsByHabit.get(h.id) ?? [];
-      return { ...h, completions, currentStreak: calculateStreak(completions) };
+      return {
+        ...h,
+        difficulty: (h as Partial<Habit>).difficulty ?? 'moderate' as const,
+        trigger_cue: (h as Partial<Habit>).trigger_cue ?? null,
+        completions,
+        currentStreak: calculateStreak(completions),
+      } as HabitWithCompletions;
     });
   },
 
@@ -161,16 +184,22 @@ const supabaseProvider: DataProvider = {
         target_time: data.target_time ?? null,
         color: data.color ?? null,
         icon: data.icon ?? null,
+        ...(data.difficulty ? { difficulty: data.difficulty } : {}),
+        ...(data.trigger_cue ? { trigger_cue: data.trigger_cue } : {}),
       })
       .select('id, user_id, title, description, science_note, category, frequency, target_time, color, icon, is_active, sort_order, created_at')
       .single();
 
     if (error) throw new Error(error.message);
-    return { ...newHabit, completions: [], currentStreak: 0 };
+    return { ...newHabit, difficulty: data.difficulty ?? 'moderate', trigger_cue: data.trigger_cue ?? null, completions: [], currentStreak: 0 };
   },
 
   async deleteHabit(id) {
-    const { error } = await supabase.from('habits').delete().eq('id', id);
+    // Soft delete: set is_active = false to preserve completion history
+    const { error } = await supabase
+      .from('habits')
+      .update({ is_active: false })
+      .eq('id', id);
     if (error) throw new Error(error.message);
   },
 
@@ -207,7 +236,7 @@ const supabaseProvider: DataProvider = {
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50);
-    return data ?? [];
+    return (data ?? []).map((e) => ({ ...e, journal_mode: (e as Partial<JournalEntry>).journal_mode ?? 'free' })) as JournalEntry[];
   },
 
   async createJournalEntry(userId, data) {
@@ -219,11 +248,12 @@ const supabaseProvider: DataProvider = {
         mood: data.mood,
         energy_level: data.energy_level,
         tags: data.tags,
+        ...(data.journal_mode ? { journal_mode: data.journal_mode } : {}),
       })
       .select('id, user_id, content, mood, energy_level, tags, created_at')
       .single();
     if (error) throw new Error(error.message);
-    return entry;
+    return entry ? { ...entry, journal_mode: data.journal_mode ?? 'free' } as JournalEntry : null;
   },
 
   async saveFocusSession(userId, data) {
@@ -234,7 +264,23 @@ const supabaseProvider: DataProvider = {
       completed: data.completed,
       started_at: data.started_at,
       ended_at: data.ended_at,
+      interruptions: data.interruption_types?.length ?? 0,
+      ...(data.interruption_types?.length ? { interruption_types: data.interruption_types } : {}),
     });
+    // Retry without interruption_types if the column doesn't exist yet
+    if (error?.message?.includes('interruption_types')) {
+      const { error: retryError } = await supabase.from('focus_sessions').insert({
+        user_id: userId,
+        duration_minutes: data.duration_minutes,
+        session_type: data.session_type,
+        completed: data.completed,
+        started_at: data.started_at,
+        ended_at: data.ended_at,
+        interruptions: data.interruption_types?.length ?? 0,
+      });
+      if (retryError) throw new Error(retryError.message);
+      return;
+    }
     if (error) throw new Error(error.message);
   },
 
@@ -291,6 +337,10 @@ const mockProvider: DataProvider = {
     return { ...MOCK_PROFILE, display_name: displayName };
   },
 
+  async updateProfile() {
+    // No-op in demo mode
+  },
+
   async fetchHabits() {
     return mockHabits;
   },
@@ -307,6 +357,8 @@ const mockProvider: DataProvider = {
       target_time: data.target_time ?? null,
       color: data.color ?? null,
       icon: data.icon ?? null,
+      difficulty: data.difficulty ?? 'moderate',
+      trigger_cue: data.trigger_cue ?? null,
       is_active: true,
       sort_order: 0,
       created_at: new Date().toISOString(),
@@ -318,7 +370,9 @@ const mockProvider: DataProvider = {
   },
 
   async deleteHabit(id) {
-    mockHabits = mockHabits.filter((h) => h.id !== id);
+    mockHabits = mockHabits.map((h) =>
+      h.id === id ? { ...h, is_active: false } : h
+    ).filter((h) => h.is_active);
   },
 
   async toggleCompletion(habitId, _userId, currentCompletions) {
@@ -351,6 +405,7 @@ const mockProvider: DataProvider = {
       mood: data.mood,
       energy_level: data.energy_level,
       tags: data.tags,
+      journal_mode: (data.journal_mode as JournalEntry['journal_mode']) ?? 'free',
       created_at: new Date().toISOString(),
     };
     mockJournalEntries = [entry, ...mockJournalEntries];

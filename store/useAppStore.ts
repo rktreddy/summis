@@ -18,6 +18,9 @@ interface AppState {
 
   error: string | null;
   setError: (error: string | null) => void;
+
+  milestoneHabit: { habitName: string; streak: number } | null;
+  setMilestoneHabit: (m: { habitName: string; streak: number } | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -45,4 +48,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   error: null,
   setError: (error) => set({ error }),
+
+  milestoneHabit: null,
+  setMilestoneHabit: (milestoneHabit) => set({ milestoneHabit }),
 }));

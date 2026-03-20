@@ -31,11 +31,15 @@ export function usePerformanceScore() {
       const sevenDaysAgo = new Date(now);
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      // Habit score: completion rate for the last 7 days
-      let totalPossible = habits.length * 7;
-      let totalCompleted = 0;
+      // Habit score: difficulty-weighted completion rate for the last 7 days
+      const DIFFICULTY_WEIGHTS: Record<string, number> = { easy: 0.5, moderate: 1.0, hard: 1.5 };
+      let weightedCompleted = 0;
+      let weightedPossible = 0;
 
       for (const habit of habits) {
+        const weight = DIFFICULTY_WEIGHTS[habit.difficulty] ?? 1.0;
+        weightedPossible += weight * 7;
+
         const weekCompletions = habit.completions.filter((c) => {
           const t = new Date(c.completed_at);
           return t >= sevenDaysAgo && t <= now;
@@ -43,11 +47,11 @@ export function usePerformanceScore() {
         const uniqueDays = new Set(
           weekCompletions.map((c) => new Date(c.completed_at).toDateString())
         );
-        totalCompleted += uniqueDays.size;
+        weightedCompleted += uniqueDays.size * weight;
       }
 
       const habitScore =
-        totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+        weightedPossible > 0 ? Math.round((weightedCompleted / weightedPossible) * 100) : 0;
 
       // Focus score: based on focus sessions this week
       const focusSessions = await data.fetchFocusSessions(userId, sevenDaysAgo);

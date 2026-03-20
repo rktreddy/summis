@@ -12,6 +12,7 @@ export const MOCK_PROFILE: Profile = {
   display_name: 'Alex',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   onboarding_completed: true,
+  user_goal: 'focus',
   subscription_tier: 'pro',
   created_at: daysAgo(30),
 };
@@ -28,6 +29,8 @@ export const MOCK_HABITS: HabitWithCompletions[] = [
     target_time: '07:00',
     color: '#EC4899',
     icon: null,
+    difficulty: 'easy',
+    trigger_cue: 'After I pour my morning coffee',
     is_active: true,
     sort_order: 0,
     created_at: daysAgo(21),
@@ -60,6 +63,8 @@ export const MOCK_HABITS: HabitWithCompletions[] = [
     target_time: '09:30',
     color: '#7C5CFC',
     icon: null,
+    difficulty: 'hard',
+    trigger_cue: 'When I sit down at my desk',
     is_active: true,
     sort_order: 1,
     created_at: daysAgo(14),
@@ -86,6 +91,8 @@ export const MOCK_HABITS: HabitWithCompletions[] = [
     target_time: '17:00',
     color: '#22C55E',
     icon: null,
+    difficulty: 'hard',
+    trigger_cue: null,
     is_active: true,
     sort_order: 2,
     created_at: daysAgo(10),
@@ -107,6 +114,7 @@ export const MOCK_JOURNAL_ENTRIES: JournalEntry[] = [
     mood: 5,
     energy_level: 4,
     tags: ['productive', 'focus'],
+    journal_mode: 'free',
     created_at: daysAgo(0),
   },
   {
@@ -116,6 +124,7 @@ export const MOCK_JOURNAL_ENTRIES: JournalEntry[] = [
     mood: 3,
     energy_level: 3,
     tags: ['exercise', 'energy'],
+    journal_mode: 'reflection',
     created_at: daysAgo(1),
   },
   {
@@ -125,6 +134,7 @@ export const MOCK_JOURNAL_ENTRIES: JournalEntry[] = [
     mood: 4,
     energy_level: 5,
     tags: ['caffeine', 'experiment'],
+    journal_mode: 'free',
     created_at: daysAgo(2),
   },
   {
@@ -134,15 +144,16 @@ export const MOCK_JOURNAL_ENTRIES: JournalEntry[] = [
     mood: 4,
     energy_level: 4,
     tags: ['weekly-review'],
+    journal_mode: 'gratitude',
     created_at: daysAgo(5),
   },
 ];
 
 export const MOCK_FOCUS_SESSIONS: FocusSession[] = [
-  { id: 'f1', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 1, quality_rating: 5, notes: null, started_at: daysAgo(0), ended_at: daysAgo(0) },
-  { id: 'f2', user_id: 'demo-user-001', duration_minutes: 45, session_type: 'study', completed: true, interruptions: 0, quality_rating: 4, notes: null, started_at: daysAgo(1), ended_at: daysAgo(1) },
-  { id: 'f3', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 2, quality_rating: 3, notes: null, started_at: daysAgo(2), ended_at: daysAgo(2) },
-  { id: 'f4', user_id: 'demo-user-001', duration_minutes: 25, session_type: 'creative', completed: true, interruptions: 0, quality_rating: 5, notes: null, started_at: daysAgo(3), ended_at: daysAgo(3) },
-  { id: 'f5', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 1, quality_rating: 4, notes: null, started_at: daysAgo(4), ended_at: daysAgo(4) },
-  { id: 'f6', user_id: 'demo-user-001', duration_minutes: 45, session_type: 'study', completed: true, interruptions: 0, quality_rating: 4, notes: null, started_at: daysAgo(5), ended_at: daysAgo(5) },
+  { id: 'f1', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 1, interruption_types: ['phone'], quality_rating: 5, notes: null, started_at: daysAgo(0), ended_at: daysAgo(0) },
+  { id: 'f2', user_id: 'demo-user-001', duration_minutes: 45, session_type: 'study', completed: true, interruptions: 0, interruption_types: [], quality_rating: 4, notes: null, started_at: daysAgo(1), ended_at: daysAgo(1) },
+  { id: 'f3', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 2, interruption_types: ['phone', 'person'], quality_rating: 3, notes: null, started_at: daysAgo(2), ended_at: daysAgo(2) },
+  { id: 'f4', user_id: 'demo-user-001', duration_minutes: 25, session_type: 'creative', completed: true, interruptions: 0, interruption_types: [], quality_rating: 5, notes: null, started_at: daysAgo(3), ended_at: daysAgo(3) },
+  { id: 'f5', user_id: 'demo-user-001', duration_minutes: 90, session_type: 'deep_work', completed: true, interruptions: 1, interruption_types: ['thought'], quality_rating: 4, notes: null, started_at: daysAgo(4), ended_at: daysAgo(4) },
+  { id: 'f6', user_id: 'demo-user-001', duration_minutes: 45, session_type: 'study', completed: true, interruptions: 0, interruption_types: [], quality_rating: 4, notes: null, started_at: daysAgo(5), ended_at: daysAgo(5) },
 ];

@@ -1,5 +1,5 @@
 export const FEATURES = {
-  habits_limit: 3,
+  habits_limit: 5,
   journal: true,
   focus_timer: true,
   basic_streaks: true,

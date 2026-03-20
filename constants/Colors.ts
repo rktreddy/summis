@@ -17,6 +17,8 @@ export const CATEGORY_COLORS: Record<string, string> = {
   exercise: '#22C55E',
   nutrition: '#F59E0B',
   mindfulness: '#EC4899',
+  recovery: '#06B6D4',
+  general: '#9CA3AF',
 };
 
 export default {

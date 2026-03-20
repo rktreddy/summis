@@ -41,7 +41,14 @@ Welcome! This tutorial walks you through the entire **1000x** codebase — a sci
 - **Performance Insights** — Charts and scores showing your productivity trends (Pro feature)
 - **Science Protocols** — Curated routines based on peer-reviewed research
 
-**Business model:** The app is free with limits (max 3 habits). Users can upgrade to Pro ($7.99/month, $49.99/year, or $79.99 lifetime) for unlimited habits, AI insights, and analytics.
+**Business model:** The app is free with limits (max 5 habits). Users can upgrade to Pro ($7.99/month, $49.99/year, or $79.99 lifetime) for unlimited habits, AI insights, correlation engine, and analytics.
+
+**Recent additions:**
+- **Onboarding goal quiz** — new users choose a performance goal and get 3 pre-loaded science-backed habits
+- **Habit difficulty** — Easy/Moderate/Hard levels that weight your performance score
+- **Interruption logging** — when you pause a focus session, log what distracted you (Phone/Person/Thought/Other)
+- **Streak milestones** — shareable celebration cards at 7, 14, 30, 60, and 100 day streaks
+- **Correlation engine** — after 30+ days, shows which habits most impact your performance (Pearson analysis)
 
 ---
 
@@ -193,6 +200,7 @@ export interface Profile {
   display_name: string | null;
   timezone: string;
   onboarding_completed: boolean;
+  user_goal: 'focus' | 'sleep' | 'fitness' | 'general' | null;
   subscription_tier: 'free' | 'pro' | 'lifetime';
   created_at: string;
 }
@@ -384,19 +392,30 @@ const DEMO_MODE = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined
 
 SplashScreen.preventAutoHideAsync();
 
-function useProtectedRoute(session: { user: { id: string } } | null) {
+function useProtectedRoute(
+  session: { user: { id: string } } | null,
+  profile: { onboarding_completed: boolean } | null
+) {
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === 'onboarding';
 
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
-      router.replace('/(tabs)');
+      // After login, check if onboarding is needed
+      if (profile && !profile.onboarding_completed) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)');
+      }
+    } else if (session && profile && !profile.onboarding_completed && !inOnboarding) {
+      router.replace('/onboarding');
     }
-  }, [session, segments]);
+  }, [session, profile, segments]);
 }
 ```
 

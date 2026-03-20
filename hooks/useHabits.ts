@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { calculateStreak } from '@/lib/science';
 import { isCompletedToday } from '@/lib/date-utils';
+import { isMilestone } from '@/lib/streak-milestones';
 import type { Habit, HabitCompletion } from '@/types';
 
 export function useHabits() {
@@ -16,6 +17,7 @@ export function useHabits() {
     isLoading,
     setIsLoading,
     setError,
+    setMilestoneHabit,
   } = useAppStore();
   const data = useData();
 
@@ -47,6 +49,8 @@ export function useHabits() {
       target_time?: string;
       color?: string;
       icon?: string;
+      difficulty?: Habit['difficulty'];
+      trigger_cue?: string;
     }) => {
       if (!userId && !data.isDemoMode) return;
 
@@ -115,7 +119,13 @@ export function useHabits() {
           userId ?? 'demo-user-001',
           habit.completions
         );
-        updateHabitCompletions(habitId, updatedCompletions, calculateStreak(updatedCompletions));
+        const newStreak = calculateStreak(updatedCompletions);
+        updateHabitCompletions(habitId, updatedCompletions, newStreak);
+
+        // Check for streak milestone on completion (not unchecking)
+        if (!wasCompleted && isMilestone(newStreak)) {
+          setMilestoneHabit({ habitName: habit.title, streak: newStreak });
+        }
       } catch (err) {
         // Roll back optimistic update
         console.error('Error toggling habit completion:', err);

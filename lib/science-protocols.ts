@@ -7,7 +7,7 @@
 export interface ScienceProtocol {
   id: string;
   title: string;
-  category: 'focus' | 'sleep' | 'exercise' | 'nutrition' | 'mindfulness';
+  category: 'focus' | 'sleep' | 'exercise' | 'nutrition' | 'mindfulness' | 'recovery';
   summary: string;
   citation: string;
   steps: string[];
@@ -140,6 +140,24 @@ export const SCIENCE_PROTOCOLS: ScienceProtocol[] = [
       'Track energy levels on days you follow vs skip this protocol',
     ],
     durationMinutes: null,
+    tier: 'free',
+  },
+  {
+    id: 'cold-exposure',
+    title: 'Deliberate Cold Exposure for Focus',
+    category: 'recovery',
+    summary:
+      'Brief cold exposure triggers a 250% increase in dopamine and 530% increase in norepinephrine — sustained for hours. This improves mood, energy, and focus without the crash of stimulants.',
+    citation:
+      'Srámek et al. (2000). Human physiological responses to immersion into water of different temperatures. European Journal of Applied Physiology, 81, 436-442. Protocol from: Huberman Lab (2022).',
+    steps: [
+      'Start with 30 seconds of cold water at the end of your shower',
+      'Build up to 1-3 minutes over 2 weeks',
+      'Target: 11 minutes total per week across 2-4 sessions',
+      'Water should be uncomfortably cold but safe (50-60°F / 10-15°C)',
+      'Track your mood and focus before and after each session',
+    ],
+    durationMinutes: 3,
     tier: 'free',
   },
 ];

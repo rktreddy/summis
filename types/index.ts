@@ -1,8 +1,11 @@
+export type UserGoal = 'focus' | 'sleep' | 'fitness' | 'general';
+
 export interface Profile {
   id: string;
   display_name: string | null;
   timezone: string;
   onboarding_completed: boolean;
+  user_goal: UserGoal | null;
   subscription_tier: 'free' | 'pro' | 'lifetime';
   created_at: string;
 }
@@ -13,11 +16,13 @@ export interface Habit {
   title: string;
   description: string | null;
   science_note: string | null;
-  category: 'focus' | 'sleep' | 'exercise' | 'nutrition' | 'mindfulness' | null;
+  category: 'focus' | 'sleep' | 'exercise' | 'nutrition' | 'mindfulness' | 'recovery' | 'general' | null;
   frequency: 'daily' | 'weekdays' | 'custom';
   target_time: string | null;
   color: string | null;
   icon: string | null;
+  difficulty: 'easy' | 'moderate' | 'hard';
+  trigger_cue: string | null;
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -44,6 +49,7 @@ export interface JournalEntry {
   mood: number | null;
   energy_level: number | null;
   tags: string[];
+  journal_mode: 'free' | 'gratitude' | 'reflection' | null;
   created_at: string;
 }
 
@@ -54,10 +60,19 @@ export interface FocusSession {
   session_type: 'deep_work' | 'study' | 'creative' | 'admin';
   completed: boolean;
   interruptions: number;
+  interruption_types: string[];
   quality_rating: number | null;
   notes: string | null;
   started_at: string;
   ended_at: string | null;
+}
+
+export interface DailyScore {
+  date: string;
+  overallScore: number;
+  habitScore: number;
+  focusScore: number;
+  consistencyScore: number;
 }
 
 export interface PerformanceScore {

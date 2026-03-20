@@ -86,6 +86,8 @@ export default function SignupScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          returnKeyType="next"
+          blurOnSubmit={false}
           accessibilityLabel="Email address"
         />
 
@@ -96,6 +98,8 @@ export default function SignupScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          returnKeyType="next"
+          blurOnSubmit={false}
           accessibilityLabel="Password"
         />
 
@@ -106,6 +110,8 @@ export default function SignupScreen() {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
+          returnKeyType="go"
+          onSubmitEditing={handleSignup}
           accessibilityLabel="Confirm password"
         />
 

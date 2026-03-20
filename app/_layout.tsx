@@ -13,26 +13,37 @@ export { ErrorBoundary } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync();
 
-function useProtectedRoute(session: { user: { id: string } } | null) {
+function useProtectedRoute(
+  session: { user: { id: string } } | null,
+  profile: { onboarding_completed: boolean } | null
+) {
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === 'onboarding';
 
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
-      router.replace('/(tabs)');
+      // After login, check if onboarding is needed
+      if (profile && !profile.onboarding_completed) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)');
+      }
+    } else if (session && profile && !profile.onboarding_completed && !inOnboarding) {
+      router.replace('/onboarding');
     }
-  }, [session, segments]);
+  }, [session, profile, segments]);
 }
 
 function RootLayoutInner() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-  const { session, setSession, setProfile, setHabits } = useAppStore();
+  const { session, profile, setSession, setProfile, setHabits } = useAppStore();
   const [isReady, setIsReady] = useState(false);
   const data = useData();
 
@@ -105,7 +116,7 @@ function RootLayoutInner() {
     }
   }, [loaded, isReady]);
 
-  useProtectedRoute(session);
+  useProtectedRoute(session, profile);
 
   if (!loaded || !isReady) {
     return null;
@@ -116,6 +127,7 @@ function RootLayoutInner() {
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="protocols" options={{ presentation: 'modal' }} />
         <Stack.Screen name="ai-insights" options={{ presentation: 'modal' }} />
