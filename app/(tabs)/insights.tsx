@@ -19,6 +19,7 @@ import { WeeklyReport } from '@/components/insights/WeeklyReport';
 import { PerformanceChart } from '@/components/insights/PerformanceChart';
 import { HabitCompletionChart } from '@/components/insights/HabitCompletionChart';
 import { MultiplierStack } from '@/components/insights/MultiplierStack';
+import { ExerciseCognitionCard, type ExerciseDay } from '@/components/insights/ExerciseCognitionCard';
 import { PaywallModal } from '@/components/ui/PaywallModal';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -60,6 +61,19 @@ export default function InsightsScreen() {
     () => computeMultipliers(habits, focusSessions),
     [habits, focusSessions]
   );
+
+  // Derive exercise days from exercise-category habit completions
+  const exerciseDays: ExerciseDay[] = useMemo(() => {
+    const days = new Map<string, number>();
+    for (const h of habits) {
+      if (h.category !== 'exercise') continue;
+      for (const c of h.completions) {
+        const date = new Date(c.completed_at).toISOString().split('T')[0];
+        days.set(date, (days.get(date) ?? 0) + 30); // estimate 30 min per exercise habit
+      }
+    }
+    return Array.from(days.entries()).map(([date, mins]) => ({ date, workoutMinutes: mins }));
+  }, [habits]);
 
   const handleRefresh = async () => {
     await fetchHabits();
@@ -160,6 +174,15 @@ export default function InsightsScreen() {
         <View style={styles.section}>
           <HabitCompletionChart habits={habits} />
         </View>
+
+        {exerciseDays.length > 0 && focusSessions.length > 0 && (
+          <View style={styles.section}>
+            <ExerciseCognitionCard
+              exerciseDays={exerciseDays}
+              focusSessions={focusSessions}
+            />
+          </View>
+        )}
 
         <View style={styles.section}>
           <Card>

@@ -19,6 +19,8 @@ import { Card } from '@/components/ui/Card';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { PaywallModal } from '@/components/ui/PaywallModal';
 import { DailyTimeline } from '@/components/insights/DailyTimeline';
+import { RecoveryCard } from '@/components/insights/RecoveryCard';
+import { useRecoveryScore } from '@/hooks/useRecoveryScore';
 import { Colors } from '@/constants/Colors';
 import { isCompletedToday } from '@/lib/date-utils';
 import type { HabitWithCompletions, Chronotype } from '@/types';
@@ -39,6 +41,11 @@ export default function TodayScreen() {
   const setError = useAppStore((s) => s.setError);
   const milestoneHabit = useAppStore((s) => s.milestoneHabit);
   const setMilestoneHabit = useAppStore((s) => s.setMilestoneHabit);
+  const { input: recoveryInput, compute: computeRecovery } = useRecoveryScore();
+
+  useEffect(() => {
+    computeRecovery();
+  }, [computeRecovery]);
   const [showForm, setShowForm] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
@@ -119,6 +126,12 @@ export default function TodayScreen() {
           <Text style={styles.statLabel}>Best Streak</Text>
         </Card>
       </View>
+
+      {recoveryInput && (
+        <View style={styles.timelineWrap}>
+          <RecoveryCard input={recoveryInput} />
+        </View>
+      )}
 
       {profile?.wake_time && profile?.chronotype && (
         <View style={styles.timelineWrap}>

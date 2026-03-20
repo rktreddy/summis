@@ -1,15 +1,18 @@
 import { useState, useCallback } from 'react';
 import {
   fetchTodayHealthData,
+  fetchWorkouts,
   requestHealthPermissions,
   checkAutoComplete,
   DEFAULT_RULES,
   type HealthData,
   type HealthSyncResult,
+  type WorkoutEntry,
 } from '@/lib/health-kit';
 
 export function useHealthData() {
   const [healthData, setHealthData] = useState<HealthData | null>(null);
+  const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -33,10 +36,29 @@ export function useHealthData() {
     }
   }, []);
 
+  const syncWorkouts = useCallback(async (since: Date) => {
+    try {
+      const entries = await fetchWorkouts(since);
+      setWorkouts(entries);
+      return entries;
+    } catch {
+      return [];
+    }
+  }, []);
+
   const getAutoCompletableHabits = useCallback((): string[] => {
     if (!healthData) return [];
     return checkAutoComplete(healthData, DEFAULT_RULES);
   }, [healthData]);
 
-  return { healthData, isAvailable, loading, requestPermissions, syncHealthData, getAutoCompletableHabits };
+  return {
+    healthData,
+    workouts,
+    isAvailable,
+    loading,
+    requestPermissions,
+    syncHealthData,
+    syncWorkouts,
+    getAutoCompletableHabits,
+  };
 }

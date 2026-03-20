@@ -7,6 +7,15 @@ export interface HealthData {
   sleepMinutes: number;
   workoutMinutes: number;
   activeCalories: number;
+  hrvMean: number | null;
+  restingHeartRate: number | null;
+}
+
+export interface WorkoutEntry {
+  date: string;        // YYYY-MM-DD
+  type: string;        // 'running', 'cycling', 'strength', etc.
+  durationMinutes: number;
+  caloriesBurned: number;
 }
 
 export interface HealthSyncResult {
@@ -35,6 +44,22 @@ export async function fetchTodayHealthData(): Promise<HealthSyncResult> {
   };
 }
 
+/**
+ * Fetch workouts since a given date.
+ * Returns workout entries with date, type, duration, and calories.
+ */
+export async function fetchWorkouts(_since: Date): Promise<WorkoutEntry[]> {
+  // TODO: Implement when expo-health is installed
+  // const { getWorkoutsAsync } = await import('expo-health');
+  // return getWorkoutsAsync(since).map(w => ({
+  //   date: w.startDate.toISOString().split('T')[0],
+  //   type: w.workoutType,
+  //   durationMinutes: w.duration / 60,
+  //   caloriesBurned: w.totalEnergyBurned ?? 0,
+  // }));
+  return [];
+}
+
 export interface AutoCompleteRule {
   habitTitle: string;
   metric: keyof HealthData;
@@ -55,6 +80,7 @@ export function checkAutoComplete(
   return rules
     .filter((rule) => {
       const value = healthData[rule.metric];
+      if (value == null) return false;
       return rule.comparison === 'gte' ? value >= rule.threshold : value <= rule.threshold;
     })
     .map((rule) => rule.habitTitle);
