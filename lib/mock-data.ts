@@ -7,6 +7,8 @@ const daysAgo = (d: number) => {
   return date.toISOString();
 };
 
+const demoTier = (process.env.EXPO_PUBLIC_DEMO_TIER === 'free' ? 'free' : 'pro') as Profile['subscription_tier'];
+
 export const MOCK_PROFILE: Profile = {
   id: 'demo-user-001',
   display_name: 'Alex',
@@ -15,7 +17,7 @@ export const MOCK_PROFILE: Profile = {
   user_goal: 'focus',
   wake_time: '07:00',
   chronotype: 'moderate',
-  subscription_tier: 'pro',
+  subscription_tier: demoTier,
   created_at: daysAgo(30),
 };
 

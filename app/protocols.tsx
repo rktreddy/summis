@@ -6,11 +6,17 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
+  Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SCIENCE_PROTOCOLS, type ScienceProtocol } from '@/lib/science-protocols';
+import { getProtocolHabits } from '@/lib/active-protocols';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useHabits } from '@/hooks/useHabits';
+import { useAppStore } from '@/store/useAppStore';
 import { PaywallModal } from '@/components/ui/PaywallModal';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/Colors';
 
@@ -20,6 +26,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   exercise: '\uD83C\uDFC3',
   nutrition: '\uD83E\uDD57',
   mindfulness: '\uD83E\uDDD8',
+  recovery: '\u2744\uFE0F',
 };
 
 function ProtocolCard({
@@ -56,8 +63,44 @@ function ProtocolCard({
 export default function ProtocolsScreen() {
   const router = useRouter();
   const { isPro } = useSubscription();
+  const { createHabit } = useHabits();
+  const session = useAppStore((s) => s.session);
   const [showPaywall, setShowPaywall] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<ScienceProtocol | null>(null);
+  const [activating, setActivating] = useState(false);
+  const [activated, setActivated] = useState<Set<string>>(new Set());
+
+  async function handleActivate(protocol: ScienceProtocol) {
+    if (!session?.user?.id) return;
+    setActivating(true);
+    try {
+      const presets = getProtocolHabits(protocol.id);
+      for (const preset of presets) {
+        await createHabit({
+          title: preset.title,
+          description: preset.description,
+          category: preset.category,
+          difficulty: preset.difficulty,
+          trigger_cue: preset.trigger_cue,
+        });
+      }
+      setActivated((prev) => new Set(prev).add(protocol.id));
+      if (Platform.OS === 'web') {
+        alert(`${protocol.title} activated! ${presets.length} habits created.`);
+      } else {
+        Alert.alert('Protocol Activated', `${presets.length} habits created from ${protocol.title}. Track them on your Today screen.`);
+      }
+    } catch (err) {
+      console.error('Error activating protocol:', err);
+      if (Platform.OS === 'web') {
+        alert('Failed to activate protocol.');
+      } else {
+        Alert.alert('Error', 'Failed to activate protocol.');
+      }
+    } finally {
+      setActivating(false);
+    }
+  }
 
   function handlePress(protocol: ScienceProtocol) {
     if (protocol.tier === 'pro' && !isPro) {
@@ -116,6 +159,19 @@ export default function ProtocolsScreen() {
                   Suggested duration: {selectedProtocol.durationMinutes} minutes
                 </Text>
               </Card>
+            )}
+
+            <Button
+              title={activated.has(selectedProtocol.id) ? 'Activated \u2713' : 'Activate Protocol'}
+              onPress={() => handleActivate(selectedProtocol)}
+              loading={activating}
+              disabled={activated.has(selectedProtocol.id)}
+              style={styles.activateBtn}
+            />
+            {!activated.has(selectedProtocol.id) && (
+              <Text style={styles.activateHint}>
+                Creates {getProtocolHabits(selectedProtocol.id).length} habits on your Today screen
+              </Text>
             )}
           </View>
         ) : (
@@ -296,5 +352,15 @@ const styles = StyleSheet.create({
   durationText: {
     color: Colors.textSecondary,
     fontSize: 13,
+  },
+  activateBtn: {
+    marginTop: 20,
+  },
+  activateHint: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

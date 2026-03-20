@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "demo": "EXPO_PUBLIC_DEMO_MODE=true expo start",
+    "demo:free": "EXPO_PUBLIC_DEMO_MODE=true EXPO_PUBLIC_DEMO_TIER=free expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",

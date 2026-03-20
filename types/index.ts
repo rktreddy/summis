@@ -61,7 +61,7 @@ export interface FocusSession {
   id: string;
   user_id: string;
   duration_minutes: number;
-  session_type: 'deep_work' | 'study' | 'creative' | 'admin';
+  session_type: 'deep_work' | 'study' | 'creative' | 'admin' | 'practice';
   completed: boolean;
   interruptions: number;
   interruption_types: string[];

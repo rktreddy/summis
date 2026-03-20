@@ -470,7 +470,8 @@ const mockProvider: DataProvider = {
 
 // ── Context ────────────────────────────────────────────────────────────
 
-const IS_DEMO = process.env.EXPO_PUBLIC_SUPABASE_URL === undefined
+const IS_DEMO = process.env.EXPO_PUBLIC_DEMO_MODE === 'true'
+  || process.env.EXPO_PUBLIC_SUPABASE_URL === undefined
   || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
 
 const DataContext = createContext<DataProvider>(IS_DEMO ? mockProvider : supabaseProvider);

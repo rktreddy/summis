@@ -4,9 +4,10 @@ import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { Button } from '@/components/ui/Button';
 import { InterruptionLogger } from '@/components/focus/InterruptionLogger';
+import { SkillLogger } from '@/components/focus/SkillLogger';
 import { Colors } from '@/constants/Colors';
 
-type SessionType = 'deep_work' | 'study' | 'creative' | 'admin';
+type SessionType = 'deep_work' | 'study' | 'creative' | 'admin' | 'practice';
 
 const PRESETS = [
   { label: '25 min', minutes: 25 },
@@ -19,6 +20,7 @@ const SESSION_TYPES: { key: SessionType; label: string }[] = [
   { key: 'study', label: 'Study' },
   { key: 'creative', label: 'Creative' },
   { key: 'admin', label: 'Admin' },
+  { key: 'practice', label: 'Practice' },
 ];
 
 export default function FocusScreen() {
@@ -33,6 +35,7 @@ export default function FocusScreen() {
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
   const [interruptionTypes, setInterruptionTypes] = useState<string[]>([]);
   const [showInterruptionLogger, setShowInterruptionLogger] = useState(false);
+  const [showSkillLogger, setShowSkillLogger] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const handleCompleteRef = useRef<() => void>(() => {});
 
@@ -70,6 +73,11 @@ export default function FocusScreen() {
           Alert.alert('Error', 'Failed to save focus session.');
         }
       }
+    }
+
+    // Show skill logger after practice sessions
+    if (sessionType === 'practice') {
+      setShowSkillLogger(true);
     }
 
     const completed = sessionsCompleted + 1;
@@ -212,6 +220,15 @@ export default function FocusScreen() {
         visible={showInterruptionLogger}
         onLog={handleLogInterruption}
         onDismiss={() => setShowInterruptionLogger(false)}
+      />
+      <SkillLogger
+        visible={showSkillLogger}
+        onLog={(skillData) => {
+          // Save skill log as session notes
+          console.log('Skill logged:', skillData);
+          setShowSkillLogger(false);
+        }}
+        onDismiss={() => setShowSkillLogger(false)}
       />
     </SafeAreaView>
   );
