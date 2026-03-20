@@ -36,6 +36,26 @@ export async function requestHealthPermissions(): Promise<boolean> {
 }
 
 export async function fetchTodayHealthData(): Promise<HealthSyncResult> {
+  // In demo mode, return mock health data
+  const isDemoMode = process.env.EXPO_PUBLIC_DEMO_MODE === 'true'
+    || process.env.EXPO_PUBLIC_SUPABASE_URL === undefined
+    || process.env.EXPO_PUBLIC_SUPABASE_URL === '';
+
+  if (isDemoMode) {
+    return {
+      available: true,
+      data: {
+        steps: 7842,
+        sleepMinutes: 432,       // 7h 12m
+        workoutMinutes: 35,
+        activeCalories: 420,
+        hrvMean: 48,             // ms
+        restingHeartRate: 62,    // bpm
+      },
+      error: null,
+    };
+  }
+
   // TODO: Implement when expo-health is installed
   return {
     available: false,
