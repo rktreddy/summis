@@ -75,6 +75,22 @@ export default function ProfileScreen() {
           </View>
         </Card>
 
+        <Button
+          title="Accountability Partner"
+          onPress={() => router.push('/accountability')}
+          variant="secondary"
+          style={styles.accountabilityBtn}
+          accessibilityLabel="Manage accountability partner"
+        />
+
+        <Button
+          title="Daily Plan"
+          onPress={() => router.push('/daily-plan')}
+          variant="secondary"
+          style={styles.planBtn}
+          accessibilityLabel="Open daily planner"
+        />
+
         {tier === 'free' && (
           <Button
             title="Upgrade to Pro — $7.99/mo"
@@ -192,6 +208,12 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 14,
     fontWeight: '500',
+  },
+  accountabilityBtn: {
+    marginBottom: 12,
+  },
+  planBtn: {
+    marginBottom: 12,
   },
   upgradeBtn: {
     marginBottom: 12,

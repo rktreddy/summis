@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -20,7 +21,12 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { PaywallModal } from '@/components/ui/PaywallModal';
 import { DailyTimeline } from '@/components/insights/DailyTimeline';
 import { RecoveryCard } from '@/components/insights/RecoveryCard';
+import { PartnerCard } from '@/components/social/PartnerCard';
+import { ChallengeCard } from '@/components/social/ChallengeCard';
 import { useRecoveryScore } from '@/hooks/useRecoveryScore';
+import { useAccountability } from '@/hooks/useAccountability';
+import { useDailyPlan } from '@/hooks/useDailyPlan';
+import { getPlanCompletionRate } from '@/lib/daily-planner';
 import { Colors } from '@/constants/Colors';
 import { isCompletedToday } from '@/lib/date-utils';
 import type { HabitWithCompletions, Chronotype } from '@/types';
@@ -33,6 +39,7 @@ function getGreeting(): string {
 }
 
 export default function TodayScreen() {
+  const router = useRouter();
   const { habits, fetchHabits, createHabit, deleteHabit, toggleHabitCompletion, isLoading } =
     useHabits();
   const { canAddHabit } = useSubscription();
@@ -42,10 +49,13 @@ export default function TodayScreen() {
   const milestoneHabit = useAppStore((s) => s.milestoneHabit);
   const setMilestoneHabit = useAppStore((s) => s.setMilestoneHabit);
   const { input: recoveryInput, compute: computeRecovery } = useRecoveryScore();
+  const { partner, challenges, fetchPartner } = useAccountability();
+  const { plan, hasTodayPlan } = useDailyPlan();
 
   useEffect(() => {
     computeRecovery();
-  }, [computeRecovery]);
+    fetchPartner();
+  }, [computeRecovery, fetchPartner]);
   const [showForm, setShowForm] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
@@ -148,6 +158,56 @@ export default function TodayScreen() {
           onRetry={() => { setError(null); fetchHabits(); }}
           onDismiss={() => setError(null)}
         />
+      )}
+
+      {partner && partner.status === 'active' && (
+        <View style={styles.timelineWrap}>
+          <PartnerCard partner={partner} onPress={() => router.push('/accountability')} />
+          {challenges.filter((c) => !c.completed_at).slice(0, 1).map((c) => (
+            <ChallengeCard
+              key={c.id}
+              challenge={c}
+              userName="You"
+              partnerName={partner.partner_name ?? 'Partner'}
+            />
+          ))}
+        </View>
+      )}
+
+      {!hasTodayPlan && (
+        <View style={styles.timelineWrap}>
+          <TouchableOpacity
+            style={styles.planPrompt}
+            onPress={() => router.push('/daily-plan')}
+            accessibilityLabel="Plan your day"
+          >
+            <Text style={styles.planPromptIcon}>{'\uD83D\uDCCB'}</Text>
+            <View style={styles.planPromptText}>
+              <Text style={styles.planPromptTitle}>Plan Your Day</Text>
+              <Text style={styles.planPromptDesc}>Set your top 3 priorities</Text>
+            </View>
+            <Text style={styles.planPromptArrow}>{'\u203A'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {hasTodayPlan && plan && (
+        <View style={styles.timelineWrap}>
+          <TouchableOpacity
+            style={styles.planSummary}
+            onPress={() => router.push('/daily-plan')}
+            accessibilityLabel="View today's plan"
+          >
+            <Text style={styles.planSummaryTitle}>
+              Today's Plan — {getPlanCompletionRate(plan.priorities)}% done
+            </Text>
+            {plan.priorities.map((p) => (
+              <Text key={p.id} style={[styles.planSummaryItem, p.completed && styles.planSummaryDone]}>
+                {p.completed ? '\u2705' : '\u25CB'} {p.title || '(empty)'}
+              </Text>
+            ))}
+          </TouchableOpacity>
+        </View>
       )}
 
       <View style={styles.sectionHeader}>
@@ -259,6 +319,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 4,
+  },
+  planPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.accent + '40',
+  },
+  planPromptIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  planPromptText: {
+    flex: 1,
+  },
+  planPromptTitle: {
+    color: Colors.accent,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  planPromptDesc: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  planPromptArrow: {
+    color: Colors.accent,
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  planSummary: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  planSummaryTitle: {
+    color: Colors.accent,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  planSummaryItem: {
+    color: Colors.text,
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  planSummaryDone: {
+    color: Colors.textSecondary,
+    textDecorationLine: 'line-through',
   },
   sectionHeader: {
     paddingHorizontal: 20,

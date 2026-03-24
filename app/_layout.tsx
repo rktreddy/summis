@@ -132,6 +132,8 @@ function RootLayoutInner() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="protocols" options={{ presentation: 'modal' }} />
         <Stack.Screen name="ai-insights" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="daily-plan" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="accountability" options={{ presentation: 'modal' }} />
         <Stack.Screen name="privacy-policy" options={{ presentation: 'modal' }} />
       </Stack>
     </>

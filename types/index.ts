@@ -89,3 +89,42 @@ export interface PerformanceScore {
   consistency_score: number | null;
   computed_at: string;
 }
+
+export interface AccountabilityPartner {
+  id: string;
+  user_id: string;
+  partner_id: string;
+  partner_name: string | null;
+  status: 'pending' | 'active' | 'declined';
+  created_at: string;
+}
+
+export interface StreakChallenge {
+  id: string;
+  partnership_id: string;
+  habit_title: string;
+  target_days: number;
+  user_progress: number;
+  partner_progress: number;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface DailyPriority {
+  id: string;
+  title: string;
+  session_type: FocusSession['session_type'];
+  estimated_minutes: number;
+  suggested_time: string | null;
+  completed: boolean;
+}
+
+export interface DailyPlan {
+  id: string;
+  user_id: string;
+  date: string;
+  priorities: DailyPriority[];
+  review_notes: string | null;
+  day_rating: number | null;
+  created_at: string;
+}
