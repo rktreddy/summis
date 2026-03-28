@@ -18,7 +18,9 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSHealthShareUsageDescription": "1000x uses health data to correlate your habits with performance metrics.",
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -33,7 +35,12 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.thousandx.app",
-      "permissions": ["RECEIVE_BOOT_COMPLETED", "VIBRATE", "SCHEDULE_EXACT_ALARM", "com.google.android.gms.permission.ACTIVITY_RECOGNITION"]
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "SCHEDULE_EXACT_ALARM",
+        "com.google.android.gms.permission.ACTIVITY_RECOGNITION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -52,7 +59,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true

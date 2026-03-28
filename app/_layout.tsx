@@ -4,10 +4,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { initRevenueCat } from '@/lib/revenuecat';
+import { initErrorLogging, setUser, clearUser } from '@/lib/error-logging';
 import { useAppStore } from '@/store/useAppStore';
 import { DataProviderRoot, useData } from '@/lib/data-provider';
 import { AppErrorBoundary } from '@/components/ErrorBoundary';
 import 'react-native-reanimated';
+
+// Initialize Sentry as early as possible
+initErrorLogging();
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -77,6 +81,7 @@ function RootLayoutInner() {
       setSession(s ? { user: { id: s.user.id } } : null);
       if (s) {
         fetchProfile(s.user.id);
+        setUser(s.user.id);
         initRevenueCat(s.user.id).catch(console.warn);
       }
       setIsReady(true);
@@ -86,8 +91,10 @@ function RootLayoutInner() {
       setSession(s ? { user: { id: s.user.id } } : null);
       if (s) {
         fetchProfile(s.user.id);
+        setUser(s.user.id);
       } else {
         setProfile(null);
+        clearUser();
       }
     });
 

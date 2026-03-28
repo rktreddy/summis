@@ -16,7 +16,20 @@ import type {
   JournalEntry,
   FocusSession,
   PerformanceScore,
+  DailyPlan,
+  DailyPriority,
 } from '@/types';
+
+// ── Helpers ────────────────────────────────────────────────────────────
+
+/** Safely parse priorities from Supabase jsonb — handles both array and double-stringified string. */
+function parsePriorities(raw: unknown): DailyPriority[] {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return []; }
+  }
+  return [];
+}
 
 // ── Interface ──────────────────────────────────────────────────────────
 
@@ -87,6 +100,25 @@ export interface DataProvider {
     scores: { overall_score: number; habit_score: number; focus_score: number; consistency_score: number }
   ): Promise<PerformanceScore | null>;
   fetchPerformanceScore(userId: string, weekStart: string): Promise<PerformanceScore | null>;
+
+  // Daily Plans
+  fetchDailyPlan(userId: string, date: string): Promise<DailyPlan | null>;
+  upsertDailyPlan(
+    userId: string,
+    date: string,
+    priorities: DailyPriority[]
+  ): Promise<DailyPlan>;
+  updateDailyPlanReview(
+    userId: string,
+    date: string,
+    rating: number,
+    notes: string
+  ): Promise<void>;
+  updateDailyPlanPriorities(
+    userId: string,
+    date: string,
+    priorities: DailyPriority[]
+  ): Promise<void>;
 }
 
 // ── Supabase implementation ────────────────────────────────────────────
@@ -102,16 +134,12 @@ const supabaseProvider: DataProvider = {
   async fetchProfile(userId) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, display_name, timezone, onboarding_completed, user_goal, subscription_tier, created_at')
+      .select('id, display_name, timezone, onboarding_completed, user_goal, wake_time, chronotype, subscription_tier, created_at')
       .eq('id', userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return null;
-    return {
-      ...data,
-      wake_time: (data as Partial<Profile>).wake_time ?? null,
-      chronotype: (data as Partial<Profile>).chronotype ?? null,
-    } as Profile;
+    return data as Profile;
   },
 
   async createProfile(userId, displayName) {
@@ -178,24 +206,34 @@ const supabaseProvider: DataProvider = {
   },
 
   async createHabit(userId, data) {
-    const { data: newHabit, error } = await supabase
+    // Use server-side RPC that enforces free-tier habit limit
+    const { data: habitId, error: rpcError } = await supabase.rpc('create_habit_with_limit_check', {
+      p_title: data.title,
+      p_description: data.description ?? null,
+      p_category: data.category ?? null,
+      p_science_note: data.science_note ?? null,
+      p_target_time: data.target_time ?? null,
+      p_color: data.color ?? null,
+      p_icon: data.icon ?? null,
+      p_difficulty: data.difficulty ?? 'moderate',
+      p_trigger_cue: data.trigger_cue ?? null,
+    });
+
+    if (rpcError) {
+      if (rpcError.message?.includes('FREE_TIER_HABIT_LIMIT')) {
+        throw new Error('FREE_TIER_HABIT_LIMIT');
+      }
+      throw new Error(rpcError.message);
+    }
+
+    // Fetch the created habit by ID
+    const { data: newHabit, error: fetchError } = await supabase
       .from('habits')
-      .insert({
-        user_id: userId,
-        title: data.title,
-        description: data.description ?? null,
-        category: data.category ?? null,
-        science_note: data.science_note ?? null,
-        target_time: data.target_time ?? null,
-        color: data.color ?? null,
-        icon: data.icon ?? null,
-        ...(data.difficulty ? { difficulty: data.difficulty } : {}),
-        ...(data.trigger_cue ? { trigger_cue: data.trigger_cue } : {}),
-      })
       .select('id, user_id, title, description, science_note, category, frequency, target_time, color, icon, is_active, sort_order, created_at')
+      .eq('id', habitId)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (fetchError) throw new Error(fetchError.message);
     return { ...newHabit, difficulty: data.difficulty ?? 'moderate', trigger_cue: data.trigger_cue ?? null, completions: [], currentStreak: 0 };
   },
 
@@ -345,12 +383,62 @@ const supabaseProvider: DataProvider = {
     if (error) throw new Error(error.message);
     return data ?? null;
   },
+
+  async fetchDailyPlan(userId, date) {
+    const { data, error } = await supabase
+      .from('daily_plans')
+      .select('id, user_id, date, priorities, review_notes, day_rating, created_at')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    return {
+      ...data,
+      priorities: parsePriorities(data.priorities),
+    } as DailyPlan;
+  },
+
+  async upsertDailyPlan(userId, date, priorities) {
+    const { data, error } = await supabase
+      .from('daily_plans')
+      .upsert(
+        { user_id: userId, date, priorities },
+        { onConflict: 'user_id,date' }
+      )
+      .select('id, user_id, date, priorities, review_notes, day_rating, created_at')
+      .single();
+    if (error) throw new Error(error.message);
+    return {
+      ...data,
+      priorities: parsePriorities(data.priorities),
+    } as DailyPlan;
+  },
+
+  async updateDailyPlanReview(userId, date, rating, notes) {
+    const { error } = await supabase
+      .from('daily_plans')
+      .update({ day_rating: rating, review_notes: notes })
+      .eq('user_id', userId)
+      .eq('date', date);
+    if (error) throw new Error(error.message);
+  },
+
+  async updateDailyPlanPriorities(userId, date, priorities) {
+    const { error } = await supabase
+      .from('daily_plans')
+      .update({ priorities })
+      .eq('user_id', userId)
+      .eq('date', date);
+    if (error) throw new Error(error.message);
+  },
 };
 
 // ── Mock implementation ────────────────────────────────────────────────
 
 let mockHabits = [...MOCK_HABITS];
 let mockJournalEntries = [...MOCK_JOURNAL_ENTRIES];
+let mockDailyPlans: DailyPlan[] = [];
 
 const mockProvider: DataProvider = {
   isDemoMode: true,
@@ -465,6 +553,44 @@ const mockProvider: DataProvider = {
 
   async fetchPerformanceScore() {
     return null;
+  },
+
+  async fetchDailyPlan(_userId, date) {
+    return mockDailyPlans.find((p) => p.date === date) ?? null;
+  },
+
+  async upsertDailyPlan(userId, date, priorities) {
+    const existing = mockDailyPlans.find((p) => p.date === date);
+    if (existing) {
+      existing.priorities = priorities;
+      return existing;
+    }
+    const plan: DailyPlan = {
+      id: `dp-${Date.now()}`,
+      user_id: userId,
+      date,
+      priorities,
+      review_notes: null,
+      day_rating: null,
+      created_at: new Date().toISOString(),
+    };
+    mockDailyPlans.push(plan);
+    return plan;
+  },
+
+  async updateDailyPlanReview(_userId, date, rating, notes) {
+    const plan = mockDailyPlans.find((p) => p.date === date);
+    if (plan) {
+      plan.day_rating = rating;
+      plan.review_notes = notes;
+    }
+  },
+
+  async updateDailyPlanPriorities(_userId, date, priorities) {
+    const plan = mockDailyPlans.find((p) => p.date === date);
+    if (plan) {
+      plan.priorities = priorities;
+    }
   },
 };
 

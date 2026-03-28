@@ -37,7 +37,9 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
         "EXPO_PUBLIC_RC_KEY_IOS": "",
         "EXPO_PUBLIC_RC_KEY_ANDROID": "",
-        "EXPO_PUBLIC_ONESIGNAL_APP_ID": ""
+        "EXPO_PUBLIC_ONESIGNAL_APP_ID": "",
+        "EXPO_PUBLIC_SENTRY_DSN": "",
+        "EXPO_PUBLIC_MIXPANEL_TOKEN": ""
       }
     }
   },

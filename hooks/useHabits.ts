@@ -4,6 +4,9 @@ import { useData } from '@/lib/data-provider';
 import { calculateStreak } from '@/lib/science';
 import { isCompletedToday } from '@/lib/date-utils';
 import { isMilestone } from '@/lib/streak-milestones';
+import { captureException } from '@/lib/error-logging';
+import { scheduleStreakReminder } from '@/lib/notifications';
+import { isNetworkError } from '@/lib/mutation-queue';
 import type { Habit, HabitCompletion } from '@/types';
 
 export function useHabits() {
@@ -18,6 +21,7 @@ export function useHabits() {
     setIsLoading,
     setError,
     setMilestoneHabit,
+    addMutation,
   } = useAppStore();
   const data = useData();
 
@@ -33,7 +37,7 @@ export function useHabits() {
       const habitsWithCompletions = await data.fetchHabits(userId);
       setHabits(habitsWithCompletions);
     } catch (err) {
-      console.error('Error fetching habits:', err);
+      captureException(err, { context: 'fetchHabits' });
       setError('Failed to load habits. Pull down to retry.');
     } finally {
       setIsLoading(false);
@@ -58,7 +62,7 @@ export function useHabits() {
         const newHabit = await data.createHabit(userId ?? 'demo-user-001', input);
         addHabit(newHabit);
       } catch (err) {
-        console.error('Error creating habit:', err);
+        captureException(err, { context: 'createHabit' });
         setError('Failed to create habit. Please try again.');
         throw err;
       }
@@ -68,16 +72,28 @@ export function useHabits() {
 
   const deleteHabit = useCallback(
     async (id: string) => {
+      // Optimistic remove
+      removeHabit(id);
+
       try {
         await data.deleteHabit(id);
-        removeHabit(id);
       } catch (err) {
-        console.error('Error deleting habit:', err);
+        if (isNetworkError(err)) {
+          // Queue for retry on reconnect — keep optimistic state
+          addMutation({
+            id: `mut-${Date.now()}`,
+            type: 'delete_habit',
+            payload: { habitId: id },
+            createdAt: new Date().toISOString(),
+          });
+          return;
+        }
+        captureException(err, { context: 'deleteHabit' });
         setError('Failed to delete habit. Please try again.');
         throw err;
       }
     },
-    [data, removeHabit, setError]
+    [data, removeHabit, addMutation, setError]
   );
 
   const toggleHabitCompletion = useCallback(
@@ -126,14 +142,36 @@ export function useHabits() {
         if (!wasCompleted && isMilestone(newStreak)) {
           setMilestoneHabit({ habitName: habit.title, streak: newStreak });
         }
+
+        // Schedule streak protection reminder for incomplete habits
+        if (!wasCompleted && newStreak > 0) {
+          scheduleStreakReminder(habit.title, newStreak).catch(() => {
+            // Non-critical — don't surface to user
+          });
+        }
       } catch (err) {
-        // Roll back optimistic update
-        console.error('Error toggling habit completion:', err);
+        if (isNetworkError(err)) {
+          // Queue for retry on reconnect — keep optimistic state (don't roll back)
+          addMutation({
+            id: `mut-${Date.now()}`,
+            type: 'toggle_completion',
+            payload: {
+              habitId,
+              userId: userId ?? 'demo-user-001',
+              isUndo: wasCompleted,
+              targetDate: new Date().toISOString(),
+            },
+            createdAt: new Date().toISOString(),
+          });
+          return;
+        }
+        // Non-network error: roll back optimistic update
+        captureException(err, { context: 'toggleHabitCompletion', habitId });
         updateHabitCompletions(habitId, habit.completions, habit.currentStreak);
         setError('Failed to save. Please try again.');
       }
     },
-    [userId, data, habits, updateHabitCompletions, setError]
+    [userId, data, habits, updateHabitCompletions, addMutation, setError, setMilestoneHabit]
   );
 
   return { habits, fetchHabits, createHabit, deleteHabit, toggleHabitCompletion, isLoading };

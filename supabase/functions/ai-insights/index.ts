@@ -50,6 +50,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Verify Pro/Lifetime subscription — AI insights is a paid feature
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_tier')
+      .eq('id', user_id)
+      .single();
+
+    if (!profile || profile.subscription_tier === 'free') {
+      return new Response(
+        JSON.stringify({ error: 'AI Insights requires a Pro subscription' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!ANTHROPIC_API_KEY) {
       return new Response(
         JSON.stringify({ insights: getFallbackInsights() }),

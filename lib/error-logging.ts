@@ -2,41 +2,45 @@
 // Requires: @sentry/react-native
 //   npx expo install @sentry/react-native
 
+import * as Sentry from '@sentry/react-native';
+
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
 
-export async function initErrorLogging(): Promise<void> {
+export function initErrorLogging(): void {
   if (!SENTRY_DSN) {
     console.warn('Sentry: EXPO_PUBLIC_SENTRY_DSN not set, error logging disabled');
     return;
   }
-  // TODO: Uncomment when @sentry/react-native is installed
-  // const Sentry = await import('@sentry/react-native');
-  // Sentry.init({ dsn: SENTRY_DSN, tracesSampleRate: 0.2, enableAutoSessionTracking: true });
-  console.log('Sentry: Initialized (stub)');
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    tracesSampleRate: 0.2,
+    enableAutoSessionTracking: true,
+  });
 }
 
-export function captureException(error: Error, context?: Record<string, string>): void {
+export function captureException(error: unknown, context?: Record<string, string>): void {
   if (!SENTRY_DSN) {
-    console.error('[Error]', error.message, context);
+    console.error('[Error]', error instanceof Error ? error.message : String(error), context);
     return;
   }
-  // TODO: Uncomment when @sentry/react-native is installed
-  // const Sentry = require('@sentry/react-native');
-  // Sentry.captureException(error);
-  console.error('[Sentry stub]', error.message, context);
+  if (context) {
+    Sentry.withScope((scope) => {
+      for (const [key, value] of Object.entries(context)) {
+        scope.setExtra(key, value);
+      }
+      Sentry.captureException(error);
+    });
+  } else {
+    Sentry.captureException(error);
+  }
 }
 
-export function setUser(userId: string, _email?: string): void {
+export function setUser(userId: string, email?: string): void {
   if (!SENTRY_DSN) return;
-  // TODO: Uncomment when @sentry/react-native is installed
-  // const Sentry = require('@sentry/react-native');
-  // Sentry.setUser({ id: userId, email });
-  console.log('Sentry: User set (stub):', userId);
+  Sentry.setUser({ id: userId, email });
 }
 
 export function clearUser(): void {
   if (!SENTRY_DSN) return;
-  // TODO: Uncomment when @sentry/react-native is installed
-  // const Sentry = require('@sentry/react-native');
-  // Sentry.setUser(null);
+  Sentry.setUser(null);
 }

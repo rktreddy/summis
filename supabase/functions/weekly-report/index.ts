@@ -31,10 +31,11 @@ Deno.serve(async (_req: Request) => {
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // Get all users
+    // Only generate reports for Pro/Lifetime users (weekly report is a paid feature)
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, display_name');
+      .select('id, display_name')
+      .in('subscription_tier', ['pro', 'lifetime']);
 
     const reports: ReportResult[] = [];
 

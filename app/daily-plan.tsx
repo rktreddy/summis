@@ -10,14 +10,20 @@ import type { DailyPriority } from '@/types';
 
 export default function DailyPlanScreen() {
   const router = useRouter();
-  const { plan, hasTodayPlan, createPlan, togglePriority, saveDayReview, getDefaultPriorities } = useDailyPlan();
+  const { plan, hasTodayPlan, loading, createPlan, togglePriority, saveDayReview, getDefaultPriorities } = useDailyPlan();
   const [priorities, setPriorities] = useState<DailyPriority[]>(getDefaultPriorities);
   const [showReview, setShowReview] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  function handleCreate() {
+  async function handleCreate() {
     const validPriorities = priorities.filter((p) => p.title.trim());
     if (validPriorities.length === 0) return;
-    createPlan(validPriorities);
+    setSaving(true);
+    try {
+      await createPlan(validPriorities);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleUpdatePriority(index: number, updated: DailyPriority) {
@@ -72,12 +78,12 @@ export default function DailyPlanScreen() {
               />
             </View>
 
-            {plan.day_rating && (
+            {plan.day_rating != null && plan.day_rating > 0 && (
               <View style={styles.reviewSummary}>
                 <Text style={styles.reviewLabel}>Day rating: {'★'.repeat(plan.day_rating)}</Text>
-                {plan.review_notes && (
+                {plan.review_notes ? (
                   <Text style={styles.reviewNotes}>{plan.review_notes}</Text>
-                )}
+                ) : null}
               </View>
             )}
           </View>
@@ -97,7 +103,8 @@ export default function DailyPlanScreen() {
             <Button
               title="Set Plan"
               onPress={handleCreate}
-              disabled={priorities.every((p) => !p.title.trim())}
+              disabled={saving || priorities.every((p) => !p.title.trim())}
+              loading={saving}
               style={styles.createBtn}
             />
           </View>
