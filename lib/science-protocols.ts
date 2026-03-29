@@ -143,6 +143,24 @@ export const SCIENCE_PROTOCOLS: ScienceProtocol[] = [
     tier: 'free',
   },
   {
+    id: 'chronotype-alignment',
+    title: 'Chronotype-Aligned Work Scheduling',
+    category: 'focus',
+    summary:
+      'Matching task type to your energy phase (Peak for analytical work, Dip for admin, Recovery for creative) leverages natural circadian variations in cognitive capacity.',
+    citation:
+      'Horne, J. A., & Östberg, O. (1976). A self-assessment questionnaire to determine morningness-eveningness in human circadian rhythms. International Journal of Chronobiology, 4, 97-110. Framework: Yousef, S. Becoming Superhuman, UC Berkeley Haas.',
+    steps: [
+      'Identify your chronotype (AM-Shifted, Bi-Phasic, or PM-Shifted)',
+      'During your Peak phase: schedule deep analytical work — coding, writing, complex problem-solving',
+      'During your Dip phase: handle email, meetings, administrative tasks, or take a 20-min nap',
+      'During your Recovery phase: do creative work — brainstorming, design, lateral thinking',
+      'Track sprint quality across phases to find your personal pattern',
+    ],
+    durationMinutes: null,
+    tier: 'free',
+  },
+  {
     id: 'cold-exposure',
     title: 'Deliberate Cold Exposure for Focus',
     category: 'recovery',

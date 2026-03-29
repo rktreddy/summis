@@ -77,7 +77,7 @@ export default function LoginScreen() {
     >
       <View style={styles.inner}>
         <View style={styles.branding}>
-          <Text style={styles.logo}>1000x</Text>
+          <Text style={styles.logo}>Summis</Text>
           <Text style={styles.subtitle}>Science-backed performance</Text>
         </View>
 

@@ -8,6 +8,8 @@ create extension if not exists pg_net;
 
 -- 1. Weekly Performance Report — Sundays at 8:00 AM UTC
 -- Calls the weekly-report Edge Function which computes scores and sends push notifications.
+-- The X-Cron-Secret header authenticates the request (must match CRON_SECRET env var in Edge Functions).
+-- IMPORTANT: Replace <YOUR_CRON_SECRET> below with the same value you set via `supabase secrets set`.
 select cron.schedule(
   'weekly-performance-report',
   '0 8 * * 0',  -- Every Sunday at 08:00 UTC
@@ -16,7 +18,8 @@ select cron.schedule(
     url := current_setting('app.settings.supabase_url') || '/functions/v1/weekly-report',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'),
+      'X-Cron-Secret', '<YOUR_CRON_SECRET>'
     ),
     body := '{}'::jsonb
   );
@@ -33,7 +36,8 @@ select cron.schedule(
     url := current_setting('app.settings.supabase_url') || '/functions/v1/performance-score',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'),
+      'X-Cron-Secret', '<YOUR_CRON_SECRET>'
     ),
     body := '{}'::jsonb
   );

@@ -1,6 +1,10 @@
 export type UserGoal = 'focus' | 'sleep' | 'fitness' | 'general';
 
+/** @deprecated Use ChronotypeCategory from summis.ts instead */
 export type Chronotype = 'early' | 'moderate' | 'late';
+
+/** New chronotype model based on Horne-Östberg / Yousef framework */
+export type ChronotypeCategory = 'am_shifted' | 'bi_phasic' | 'pm_shifted';
 
 export interface Profile {
   id: string;
@@ -9,9 +13,19 @@ export interface Profile {
   onboarding_completed: boolean;
   user_goal: UserGoal | null;
   wake_time: string | null;
-  chronotype: Chronotype | null;
+  chronotype: Chronotype | ChronotypeCategory | null;
   subscription_tier: 'free' | 'pro' | 'lifetime';
   created_at: string;
+  // Summis-specific fields (migration 006)
+  sprint_duration_preference: number;
+  peak_window_start: string | null;
+  peak_window_end: string | null;
+  afternoon_window_start: string | null;
+  afternoon_window_end: string | null;
+  daily_sprint_target: number;
+  phone_placement_commitment: 'other_room' | 'drawer' | 'face_down' | null;
+  notification_audit_completed: boolean;
+  hygiene_setup_completed: boolean;
 }
 
 export interface Habit {

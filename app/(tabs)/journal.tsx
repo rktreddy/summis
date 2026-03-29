@@ -130,7 +130,7 @@ export default function JournalScreen() {
     }
     const text = formatAsText(entries);
     try {
-      await Share.share({ message: text, title: '1000x Journal Export' });
+      await Share.share({ message: text, title: 'Summis Journal Export' });
     } catch {
       // User cancelled share
     }

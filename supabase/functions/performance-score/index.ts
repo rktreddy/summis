@@ -1,43 +1,68 @@
 // Supabase Edge Function: performance-score
-// Computes weekly performance scores for all users or a specific user.
+// Computes weekly performance scores for a specific user (via JWT) or all users (cron).
 // Trigger: cron (weekly) or on-demand via POST with { user_id }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+const CRON_SECRET = Deno.env.get('CRON_SECRET');
 
 interface ScoreInput {
   user_id?: string;
 }
 
+/** Create a Supabase client scoped to the authenticated user's JWT. */
+function createUserClient(authHeader: string) {
+  return createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+}
+
 Deno.serve(async (req: Request) => {
   try {
-    // Verify auth — either service role (cron) or user token
     const authHeader = req.headers.get('Authorization');
+    const cronHeader = req.headers.get('X-Cron-Secret');
     const body: ScoreInput = req.method === 'POST' ? await req.json() : {};
 
-    // Get users to process
     let userIds: string[] = [];
+    let supabase;
 
     if (body.user_id) {
-      // If called with a specific user_id, verify the caller owns it
-      if (authHeader) {
-        const { data: { user }, error: authError } = await supabase.auth.getUser(
-          authHeader.replace('Bearer ', '')
+      // User-initiated: require valid JWT matching the user_id
+      if (!authHeader?.startsWith('Bearer ')) {
+        return new Response(
+          JSON.stringify({ error: 'Missing authorization' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
         );
-        if (authError || !user || user.id !== body.user_id) {
-          return new Response(
-            JSON.stringify({ error: 'Unauthorized' }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
       }
+
+      supabase = createUserClient(authHeader);
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user || user.id !== body.user_id) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       userIds = [body.user_id];
     } else {
-      // Batch mode (cron) — no user_id means process all (service role only)
+      // Batch mode (cron) — validate cron secret
+      if (!CRON_SECRET || cronHeader !== CRON_SECRET) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Service client for batch operations
+      supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id');
@@ -52,69 +77,60 @@ Deno.serve(async (req: Request) => {
     const results = [];
 
     for (const userId of userIds) {
-      // Fetch habits with difficulty
-      const { data: habits } = await supabase
-        .from('habits')
-        .select('id, difficulty')
-        .eq('user_id', userId)
-        .eq('is_active', true);
-
-      const DIFFICULTY_WEIGHTS: Record<string, number> = { easy: 0.5, moderate: 1.0, hard: 1.5 };
-
-      // Fetch completions
-      const { data: completions } = await supabase
-        .from('habit_completions')
-        .select('id, habit_id, completed_at')
-        .eq('user_id', userId)
-        .gte('completed_at', sevenDaysAgo.toISOString());
-
-      // Habit score: difficulty-weighted
-      let weightedCompleted = 0;
-      let weightedPossible = 0;
-
-      for (const habit of habits ?? []) {
-        const weight = DIFFICULTY_WEIGHTS[(habit as { difficulty: string }).difficulty] ?? 1.0;
-        weightedPossible += weight * 7;
-
-        const habitCompletions = (completions ?? []).filter(
-          (c: { habit_id: string }) => c.habit_id === (habit as { id: string }).id
-        );
-        const uniqueDays = new Set(
-          habitCompletions.map((c: { completed_at: string }) =>
-            new Date(c.completed_at).toDateString()
-          )
-        );
-        weightedCompleted += uniqueDays.size * weight;
-      }
-
-      const habitScore =
-        weightedPossible > 0 ? Math.round((weightedCompleted / weightedPossible) * 100) : 0;
-
-      // Focus score
-      const { data: sessions } = await supabase
-        .from('focus_sessions')
-        .select('duration_minutes')
+      // Fetch completed sprints
+      const { data: sprints } = await supabase
+        .from('sprints')
+        .select('id, duration_minutes, focus_quality, completed, date')
         .eq('user_id', userId)
         .eq('completed', true)
         .gte('started_at', sevenDaysAgo.toISOString());
 
-      const totalMinutes = (sessions ?? []).reduce(
-        (sum: number, s: { duration_minutes: number }) => sum + s.duration_minutes,
-        0
-      );
-      const focusScore = Math.min(100, Math.round((totalMinutes / 600) * 100));
+      const completedSprints = sprints ?? [];
+      const dailyTarget = 3; // Default; could fetch from profile
 
-      // Consistency score
-      const daysWithActivity = new Set<string>();
-      for (const c of completions ?? []) {
-        daysWithActivity.add(new Date((c as { completed_at: string }).completed_at).toDateString());
-      }
-      const consistencyScore = Math.round((daysWithActivity.size / 7) * 100);
-
-      // Overall
-      const overallScore = Math.round(
-        habitScore * 0.4 + focusScore * 0.3 + consistencyScore * 0.3
+      // Sprint completion score (30%)
+      const sprintCompletion = Math.min(
+        Math.round((completedSprints.length / (dailyTarget * 7)) * 100), 100
       );
+
+      // Focus quality score (30%)
+      const rated = completedSprints.filter((s) => s.focus_quality != null);
+      const focusQuality = rated.length > 0
+        ? Math.round(rated.reduce((sum, s) => sum + (s.focus_quality ?? 0), 0) / rated.length * 20)
+        : 0;
+
+      // Hygiene compliance score (25%)
+      const { data: hygieneLogs } = await supabase
+        .from('hygiene_logs')
+        .select('compliant')
+        .eq('user_id', userId)
+        .gte('date', sevenDaysAgo.toISOString().split('T')[0]);
+
+      const logs = hygieneLogs ?? [];
+      const hygieneScore = logs.length > 0
+        ? Math.round(logs.filter((l) => l.compliant).length / logs.length * 100)
+        : 0;
+
+      // MIT completion score (15%)
+      const { data: mits } = await supabase
+        .from('mits')
+        .select('completed')
+        .eq('user_id', userId)
+        .gte('date', sevenDaysAgo.toISOString().split('T')[0]);
+
+      const allMits = mits ?? [];
+      const mitScore = allMits.length > 0
+        ? Math.round(allMits.filter((m) => m.completed).length / allMits.length * 100)
+        : 0;
+
+      // Weighted overall (matches CLAUDE.md formula)
+      const overallScore = Math.min(100, Math.round(
+        sprintCompletion * 0.3 + focusQuality * 0.3 + hygieneScore * 0.25 + mitScore * 0.15
+      ));
+
+      // Consistency score (bonus metric)
+      const daysWithSprints = new Set(completedSprints.map((s) => s.date));
+      const consistencyScore = Math.round((daysWithSprints.size / 7) * 100);
 
       // Upsert
       const { data: saved } = await supabase
@@ -124,8 +140,8 @@ Deno.serve(async (req: Request) => {
             user_id: userId,
             week_start: weekStart,
             overall_score: overallScore,
-            habit_score: habitScore,
-            focus_score: focusScore,
+            habit_score: hygieneScore,
+            focus_score: focusQuality,
             consistency_score: consistencyScore,
           },
           { onConflict: 'user_id,week_start' }
@@ -140,8 +156,9 @@ Deno.serve(async (req: Request) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    console.error('Performance score error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: String(error) }),
+      JSON.stringify({ success: false, error: 'An internal error occurred' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

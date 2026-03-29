@@ -6,9 +6,9 @@ export const ENTITLEMENTS = {
 } as const;
 
 export const PRODUCT_IDS = {
-  monthly: 'com.1000x.pro.monthly',
-  annual: 'com.1000x.pro.annual',
-  lifetime: 'com.1000x.lifetime',
+  monthly: 'com.summis.pro.monthly',
+  annual: 'com.summis.pro.annual',
+  lifetime: 'com.summis.lifetime',
 } as const;
 
 export async function initRevenueCat(userId: string): Promise<void> {

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "1000x",
-    "slug": "thousandx",
+    "name": "Summis",
+    "slug": "summis",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "thousandx",
+    "scheme": "summis",
     "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -14,10 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thousandx.app",
+      "bundleIdentifier": "com.summis.app",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSHealthShareUsageDescription": "1000x uses health data to correlate your habits with performance metrics.",
+        "NSHealthShareUsageDescription": "Summis uses health data to correlate your cognitive hygiene practices with focus performance.",
         "UIBackgroundModes": [
           "remote-notification"
         ]
@@ -34,7 +34,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.thousandx.app",
+      "package": "com.summis.app",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -70,7 +70,7 @@
         "projectId": "your-eas-project-id"
       }
     },
-    "owner": "thousandx",
+    "owner": "summis",
     "runtimeVersion": {
       "policy": "appVersion"
     },

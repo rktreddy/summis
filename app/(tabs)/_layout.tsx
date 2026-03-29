@@ -15,7 +15,6 @@ function TabIcon({ name, color }: { name: TabIconName; color: string }) {
 }
 
 export default function TabLayout() {
-  // Expose registerIfNeeded — called by useHabits on first completion
   useNotificationSetup();
 
   const { isConnected } = useNetworkState();
@@ -63,39 +62,39 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="habits"
+          name="sprint"
           options={{
-            title: 'Habits',
-            tabBarIcon: ({ color }) => <TabIcon name="checkmark-circle-outline" color={color} />,
+            title: 'Sprint',
+            tabBarIcon: ({ color }) => <TabIcon name="flash-outline" color={color} />,
           }}
+        />
+        <Tabs.Screen
+          name="score"
+          options={{
+            title: 'Score',
+            tabBarIcon: ({ color }) => <TabIcon name="trending-up-outline" color={color} />,
+          }}
+        />
+        {/* Hidden legacy tabs — kept for Expo Router file matching, not shown in tab bar */}
+        <Tabs.Screen
+          name="habits"
+          options={{ href: null }}
         />
         <Tabs.Screen
           name="journal"
-          options={{
-            title: 'Journal',
-            tabBarIcon: ({ color }) => <TabIcon name="book-outline" color={color} />,
-          }}
+          options={{ href: null }}
         />
         <Tabs.Screen
           name="focus"
-          options={{
-            title: 'Focus',
-            tabBarIcon: ({ color }) => <TabIcon name="timer-outline" color={color} />,
-          }}
+          options={{ href: null }}
         />
         <Tabs.Screen
           name="insights"
-          options={{
-            title: 'Insights',
-            tabBarIcon: ({ color }) => <TabIcon name="analytics-outline" color={color} />,
-          }}
+          options={{ href: null }}
         />
         <Tabs.Screen
           name="profile"
-          options={{
-            title: 'Profile',
-            tabBarIcon: ({ color }) => <TabIcon name="person-outline" color={color} />,
-          }}
+          options={{ href: null }}
         />
       </Tabs>
     </View>

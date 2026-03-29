@@ -1,6 +1,16 @@
 import type { HabitCompletion } from '@/types';
 
 /**
+ * Returns today's date as a YYYY-MM-DD string in local timezone.
+ * Use this instead of inline `new Date().toISOString().split('T')[0]`
+ * which returns UTC date (can differ from local date near midnight).
+ */
+export function getTodayString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
  * Returns the start of today (midnight) as a Date.
  */
 export function getStartOfToday(): Date {

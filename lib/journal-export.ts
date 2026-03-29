@@ -4,7 +4,7 @@ const MOOD_LABELS = ['', 'Very Low', 'Low', 'Neutral', 'Good', 'Great'];
 const ENERGY_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
 
 export function formatAsText(entries: JournalEntry[]): string {
-  const lines = ['1000x Journal Export', `Exported: ${new Date().toLocaleDateString()}`, `Entries: ${entries.length}`, '', '---', ''];
+  const lines = ['Summis Journal Export', `Exported: ${new Date().toLocaleDateString()}`, `Entries: ${entries.length}`, '', '---', ''];
 
   for (const entry of entries) {
     const date = new Date(entry.created_at).toLocaleString('en-US', {

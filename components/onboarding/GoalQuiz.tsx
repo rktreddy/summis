@@ -91,7 +91,7 @@ export function GoalQuiz({ onComplete }: GoalQuizProps) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.logo}>1000x</Text>
+          <Text style={styles.logo}>Summis</Text>
           {step === 'goal' ? (
             <>
               <Text style={styles.title}>What's your #1 performance goal?</Text>

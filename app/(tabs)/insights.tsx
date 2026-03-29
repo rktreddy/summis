@@ -99,7 +99,7 @@ export default function InsightsScreen() {
           <Text style={styles.lockedTitle}>Pro Feature</Text>
           <Text style={styles.lockedSubtext}>
             Unlock performance analytics, weekly reports, and habit charts with
-            1000x Pro.
+            Summis Pro.
           </Text>
 
           {/* Show a preview of the completion chart */}

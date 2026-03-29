@@ -7,6 +7,10 @@ import {
   MOCK_HABITS,
   MOCK_JOURNAL_ENTRIES,
   MOCK_FOCUS_SESSIONS,
+  MOCK_SPRINTS,
+  MOCK_MITS,
+  MOCK_HYGIENE_CONFIGS,
+  MOCK_HYGIENE_LOGS,
 } from '@/lib/mock-data';
 import type {
   Profile,
@@ -19,6 +23,7 @@ import type {
   DailyPlan,
   DailyPriority,
 } from '@/types';
+import type { Sprint, MIT, HygieneConfig, HygieneLog } from '@/types/summis';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -119,6 +124,24 @@ export interface DataProvider {
     date: string,
     priorities: DailyPriority[]
   ): Promise<void>;
+
+  // ── Summis: Sprints ──
+  fetchSprints(userId: string, since?: Date): Promise<Sprint[]>;
+  createSprint(userId: string, data: Omit<Sprint, 'id' | 'user_id'>): Promise<Sprint>;
+  updateSprint(sprintId: string, updates: Partial<Sprint>): Promise<void>;
+
+  // ── Summis: MITs ──
+  fetchMITs(userId: string, date: string): Promise<MIT[]>;
+  createMIT(userId: string, data: { date: string; title: string; estimated_minutes: number; sort_order: number }): Promise<MIT>;
+  updateMIT(mitId: string, updates: Partial<MIT>): Promise<void>;
+  deleteMIT(mitId: string): Promise<void>;
+
+  // ── Summis: Hygiene ──
+  fetchHygieneConfigs(userId: string): Promise<HygieneConfig[]>;
+  createHygieneConfig(userId: string, data: Omit<HygieneConfig, 'id' | 'user_id' | 'created_at'>): Promise<HygieneConfig>;
+  updateHygieneConfig(configId: string, updates: Partial<HygieneConfig>): Promise<void>;
+  fetchHygieneLogs(userId: string, date: string): Promise<HygieneLog[]>;
+  createHygieneLog(userId: string, data: Omit<HygieneLog, 'id' | 'user_id' | 'logged_at'>): Promise<HygieneLog>;
 }
 
 // ── Supabase implementation ────────────────────────────────────────────
@@ -134,7 +157,7 @@ const supabaseProvider: DataProvider = {
   async fetchProfile(userId) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, display_name, timezone, onboarding_completed, user_goal, wake_time, chronotype, subscription_tier, created_at')
+      .select('id, display_name, timezone, onboarding_completed, user_goal, wake_time, chronotype, subscription_tier, created_at, sprint_duration_preference, peak_window_start, peak_window_end, afternoon_window_start, afternoon_window_end, daily_sprint_target, phone_placement_commitment, notification_audit_completed, hygiene_setup_completed')
       .eq('id', userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -150,10 +173,10 @@ const supabaseProvider: DataProvider = {
         display_name: displayName,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
-      .select('id, display_name, timezone, onboarding_completed, user_goal, subscription_tier, created_at')
+      .select('id, display_name, timezone, onboarding_completed, user_goal, wake_time, chronotype, subscription_tier, created_at, sprint_duration_preference, peak_window_start, peak_window_end, afternoon_window_start, afternoon_window_end, daily_sprint_target, phone_placement_commitment, notification_audit_completed, hygiene_setup_completed')
       .single();
     if (error) throw new Error(error.message);
-    return data ? { ...data, wake_time: null, chronotype: null } as Profile : null;
+    return data as Profile | null;
   },
 
   async updateProfile(userId, updates) {
@@ -432,6 +455,129 @@ const supabaseProvider: DataProvider = {
       .eq('date', date);
     if (error) throw new Error(error.message);
   },
+
+  // ── Summis: Sprints ──
+  async fetchSprints(userId, since) {
+    const query = supabase
+      .from('sprints')
+      .select('id, user_id, date, intention, duration_minutes, phase, started_at, ended_at, completed, phone_away, dnd_enabled, environment_ready, focus_quality, intention_met, reflection_note, interruptions, interruption_types, mit_id')
+      .eq('user_id', userId)
+      .order('started_at', { ascending: false });
+
+    if (since) {
+      query.gte('started_at', since.toISOString());
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Sprint[];
+  },
+
+  async createSprint(userId, data) {
+    const { data: sprint, error } = await supabase
+      .from('sprints')
+      .insert({ user_id: userId, ...data })
+      .select('id, user_id, date, intention, duration_minutes, phase, started_at, ended_at, completed, phone_away, dnd_enabled, environment_ready, focus_quality, intention_met, reflection_note, interruptions, interruption_types, mit_id')
+      .single();
+    if (error) throw new Error(error.message);
+    return sprint as Sprint;
+  },
+
+  async updateSprint(sprintId, updates) {
+    const { error } = await supabase
+      .from('sprints')
+      .update(updates)
+      .eq('id', sprintId);
+    if (error) throw new Error(error.message);
+  },
+
+  // ── Summis: MITs ──
+  async fetchMITs(userId, date) {
+    const { data, error } = await supabase
+      .from('mits')
+      .select('id, user_id, date, title, estimated_minutes, actual_minutes, completed, completed_at, sort_order, sprint_id, created_at')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .order('sort_order', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as MIT[];
+  },
+
+  async createMIT(userId, data) {
+    const { data: mit, error } = await supabase
+      .from('mits')
+      .insert({ user_id: userId, ...data })
+      .select('id, user_id, date, title, estimated_minutes, actual_minutes, completed, completed_at, sort_order, sprint_id, created_at')
+      .single();
+    if (error) throw new Error(error.message);
+    return mit as MIT;
+  },
+
+  async updateMIT(mitId, updates) {
+    const { error } = await supabase
+      .from('mits')
+      .update(updates)
+      .eq('id', mitId);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteMIT(mitId) {
+    const { error } = await supabase
+      .from('mits')
+      .delete()
+      .eq('id', mitId);
+    if (error) throw new Error(error.message);
+  },
+
+  // ── Summis: Hygiene ──
+  async fetchHygieneConfigs(userId) {
+    const { data, error } = await supabase
+      .from('hygiene_configs')
+      .select('id, user_id, practice, label, description, is_active, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as HygieneConfig[];
+  },
+
+  async createHygieneConfig(userId, data) {
+    const { data: config, error } = await supabase
+      .from('hygiene_configs')
+      .insert({ user_id: userId, ...data })
+      .select('id, user_id, practice, label, description, is_active, created_at')
+      .single();
+    if (error) throw new Error(error.message);
+    return config as HygieneConfig;
+  },
+
+  async updateHygieneConfig(configId, updates) {
+    const { error } = await supabase
+      .from('hygiene_configs')
+      .update(updates)
+      .eq('id', configId);
+    if (error) throw new Error(error.message);
+  },
+
+  async fetchHygieneLogs(userId, date) {
+    const { data, error } = await supabase
+      .from('hygiene_logs')
+      .select('id, user_id, practice, date, compliant, sprint_id, logged_at')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .order('logged_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as HygieneLog[];
+  },
+
+  async createHygieneLog(userId, data) {
+    const { data: log, error } = await supabase
+      .from('hygiene_logs')
+      .insert({ user_id: userId, ...data })
+      .select('id, user_id, practice, date, compliant, sprint_id, logged_at')
+      .single();
+    if (error) throw new Error(error.message);
+    return log as HygieneLog;
+  },
 };
 
 // ── Mock implementation ────────────────────────────────────────────────
@@ -439,6 +585,10 @@ const supabaseProvider: DataProvider = {
 let mockHabits = [...MOCK_HABITS];
 let mockJournalEntries = [...MOCK_JOURNAL_ENTRIES];
 let mockDailyPlans: DailyPlan[] = [];
+let mockSprints = [...MOCK_SPRINTS];
+let mockMITs = [...MOCK_MITS];
+let mockHygieneConfigs = [...MOCK_HYGIENE_CONFIGS];
+let mockHygieneLogs = [...MOCK_HYGIENE_LOGS];
 
 const mockProvider: DataProvider = {
   isDemoMode: true,
@@ -591,6 +741,87 @@ const mockProvider: DataProvider = {
     if (plan) {
       plan.priorities = priorities;
     }
+  },
+
+  // ── Summis: Sprints ──
+  async fetchSprints(_userId, since) {
+    if (since) {
+      return mockSprints.filter((s) => new Date(s.started_at) >= since);
+    }
+    return mockSprints;
+  },
+
+  async createSprint(_userId, data) {
+    const sprint: Sprint = { id: `sprint-${Date.now()}`, user_id: 'demo-user-001', ...data };
+    mockSprints = [sprint, ...mockSprints];
+    return sprint;
+  },
+
+  async updateSprint(sprintId, updates) {
+    mockSprints = mockSprints.map((s) => s.id === sprintId ? { ...s, ...updates } : s);
+  },
+
+  // ── Summis: MITs ──
+  async fetchMITs(_userId, date) {
+    return mockMITs.filter((m) => m.date === date).sort((a, b) => a.sort_order - b.sort_order);
+  },
+
+  async createMIT(_userId, data) {
+    const mit: MIT = {
+      id: `mit-${Date.now()}`,
+      user_id: 'demo-user-001',
+      ...data,
+      actual_minutes: null,
+      completed: false,
+      completed_at: null,
+      sprint_id: null,
+      created_at: new Date().toISOString(),
+    };
+    mockMITs.push(mit);
+    return mit;
+  },
+
+  async updateMIT(mitId, updates) {
+    mockMITs = mockMITs.map((m) => m.id === mitId ? { ...m, ...updates } : m);
+  },
+
+  async deleteMIT(mitId) {
+    mockMITs = mockMITs.filter((m) => m.id !== mitId);
+  },
+
+  // ── Summis: Hygiene ──
+  async fetchHygieneConfigs() {
+    return mockHygieneConfigs;
+  },
+
+  async createHygieneConfig(_userId, data) {
+    const config: HygieneConfig = {
+      id: `hc-${Date.now()}`,
+      user_id: 'demo-user-001',
+      ...data,
+      created_at: new Date().toISOString(),
+    };
+    mockHygieneConfigs.push(config);
+    return config;
+  },
+
+  async updateHygieneConfig(configId, updates) {
+    mockHygieneConfigs = mockHygieneConfigs.map((c) => c.id === configId ? { ...c, ...updates } : c);
+  },
+
+  async fetchHygieneLogs(_userId, date) {
+    return mockHygieneLogs.filter((l) => l.date === date);
+  },
+
+  async createHygieneLog(_userId, data) {
+    const log: HygieneLog = {
+      id: `hl-${Date.now()}`,
+      user_id: 'demo-user-001',
+      ...data,
+      logged_at: new Date().toISOString(),
+    };
+    mockHygieneLogs.push(log);
+    return log;
   },
 };
 

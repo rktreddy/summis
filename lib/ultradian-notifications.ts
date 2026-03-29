@@ -1,52 +1,64 @@
 import * as Notifications from 'expo-notifications';
-import { getAlertnessPeak, getNextPeakWindow } from '@/lib/science';
+import { computeEnergyWindows, ENERGY_PHASE_INFO } from '@/lib/chronotype-engine';
+import type { ChronotypeCategory } from '@/types/summis';
 
 /**
- * Schedule ultradian rhythm notifications based on the user's wake time.
- * Notifies 20 minutes before peak performance windows.
+ * Schedule energy-phase-based notifications.
+ * Replaces the old ultradian rhythm notifications with chronotype-aware alerts.
+ * Notifies 10 minutes before each energy phase transition.
  */
-export async function scheduleUltradianNotifications(
-  wakeTime: Date
+export async function scheduleEnergyPhaseNotifications(
+  chronotype: ChronotypeCategory,
+  wakeTime: string
 ): Promise<void> {
-  // Cancel existing ultradian notifications
+  // Cancel existing peak performance notifications
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   for (const n of scheduled) {
-    if (n.content.data?.type === 'peak_performance') {
+    if (n.content.data?.type === 'peak_performance' || n.content.data?.type === 'energy_phase') {
       await Notifications.cancelScheduledNotificationAsync(n.identifier);
     }
   }
 
-  // First peak: ~2.5 hours after waking
-  const firstPeak = getNextPeakWindow(wakeTime);
-  const alertness = getAlertnessPeak(wakeTime);
-
-  // Schedule notification 20 minutes before the peak
-  const peaks = [
-    { time: firstPeak, label: 'first' },
-    {
-      time: new Date(firstPeak.getTime() + 90 * 60 * 1000 + 20 * 60 * 1000),
-      label: 'second',
-    }, // ~110 min after first peak (90 min work + 20 min break)
-    {
-      time: new Date(firstPeak.getTime() + 2 * (90 * 60 * 1000 + 20 * 60 * 1000)),
-      label: 'third',
-    },
-  ];
-
+  const windows = computeEnergyWindows(chronotype, wakeTime);
   const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  let notificationCount = 0;
 
-  for (const peak of peaks) {
-    const notifyTime = new Date(peak.time.getTime() - 20 * 60 * 1000);
+  for (const window of windows) {
+    // Max 2 notifications per day
+    if (notificationCount >= 2) break;
+
+    const [h, m] = window.startTime.split(':').map(Number);
+    const phaseStart = new Date(`${today}T${window.startTime}:00`);
+
+    // Notify 10 min before phase starts
+    const notifyTime = new Date(phaseStart.getTime() - 10 * 60 * 1000);
 
     // Only schedule future notifications
     if (notifyTime <= now) continue;
 
-    // Max 2 notifications per day (per CLAUDE.md rule)
+    const info = ENERGY_PHASE_INFO[window.phase];
+
+    let body: string;
+    switch (window.phase) {
+      case 'peak':
+        body = `Your Peak focus window opens at ${window.startTime}. Prepare for deep, analytical work.`;
+        break;
+      case 'dip':
+        body = `Energy dip starting at ${window.startTime}. Good time for admin tasks or a short break.`;
+        break;
+      case 'recovery':
+        body = `Recovery window at ${window.startTime}. Great for creative work and brainstorming.`;
+        break;
+      default:
+        body = `Your ${info.label} phase starts at ${window.startTime}.`;
+    }
+
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: '1000x \u2014 Peak Performance Window',
-        body: `Your ${peak.label} focus window opens in 20 minutes. Prepare for a ${alertness.window}-minute deep work block.`,
-        data: { type: 'peak_performance' },
+        title: `Summis \u2014 ${info.label} Phase`,
+        body,
+        data: { type: 'energy_phase', phase: window.phase },
         sound: true,
       },
       trigger: {
@@ -54,7 +66,22 @@ export async function scheduleUltradianNotifications(
         date: notifyTime,
       },
     });
+
+    notificationCount++;
   }
+}
+
+/**
+ * Schedule ultradian rhythm notifications based on the user's wake time.
+ * @deprecated Use scheduleEnergyPhaseNotifications instead for chronotype-aware alerts.
+ */
+export async function scheduleUltradianNotifications(
+  wakeTime: Date
+): Promise<void> {
+  // Legacy function — delegates to new energy phase notifications
+  // Defaults to bi_phasic if called without chronotype info
+  const wakeTimeStr = `${String(wakeTime.getHours()).padStart(2, '0')}:${String(wakeTime.getMinutes()).padStart(2, '0')}`;
+  await scheduleEnergyPhaseNotifications('bi_phasic', wakeTimeStr);
 }
 
 /**
@@ -79,8 +106,8 @@ export async function scheduleMorningPrime(wakeTime: Date): Promise<void> {
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: '1000x \u2014 Morning Protocol',
-      body: 'Good morning! Your science-backed morning protocol is ready. Start with sunlight, breathwork, and set your intentions.',
+      title: 'Summis \u2014 Morning Protocol',
+      body: 'Good morning! Set your 3 MITs for today and prepare your focus environment.',
       data: { type: 'morning_prime' },
       sound: true,
     },

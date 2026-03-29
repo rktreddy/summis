@@ -20,12 +20,12 @@ interface PaywallModalProps {
 }
 
 const PRO_FEATURES = [
-  'Unlimited habits',
-  'AI-powered insights',
-  'Performance analytics & charts',
+  'Unlimited focus sprints',
+  'Hygiene × focus correlations',
+  'AI-powered cognitive insights',
+  'Advanced performance analytics',
   'Weekly performance reports',
-  'Journal export',
-  'Science-backed protocols',
+  'Science-backed protocols library',
 ];
 
 export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProps) {
@@ -100,7 +100,7 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
             </TouchableOpacity>
 
             <Text style={styles.badge}>PRO</Text>
-            <Text style={styles.title}>Unlock 1000x Pro</Text>
+            <Text style={styles.title}>Unlock Summis Pro</Text>
             <Text style={styles.subtitle}>
               Science-backed tools for peak performance
             </Text>
@@ -317,8 +317,8 @@ const styles = StyleSheet.create({
   },
   legal: {
     color: Colors.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 16,
   },
 });

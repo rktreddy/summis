@@ -20,7 +20,7 @@ export function StreakShareCard({
     <Modal visible transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <Text style={styles.logo}>1000x</Text>
+          <Text style={styles.logo}>Summis</Text>
           <Text style={styles.fireEmoji}>{'\uD83D\uDD25'}</Text>
           <Text style={styles.streak}>{streakCount}</Text>
           <Text style={styles.streakLabel}>day streak</Text>

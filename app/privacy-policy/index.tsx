@@ -2,7 +2,7 @@ import { ScrollView, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
 const EFFECTIVE_DATE = 'March 18, 2026';
-const CONTACT_EMAIL = 'privacy@thousandx.app';
+const CONTACT_EMAIL = 'privacy@summis.app';
 
 export default function PrivacyPolicyScreen() {
   return (
@@ -12,7 +12,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.date}>Effective Date: {EFFECTIVE_DATE}</Text>
 
         <Text style={styles.body}>
-          1000x ("we", "us", or "our") operates the 1000x mobile application
+          Summis ("we", "us", or "our") operates the Summis mobile application
           (the "App"). This Privacy Policy describes how we collect, use, and
           share information when you use the App.
         </Text>
@@ -86,7 +86,7 @@ export default function PrivacyPolicyScreen() {
 
         <Text style={styles.heading}>7. Subscriptions</Text>
         <Text style={styles.body}>
-          1000x Pro is available as a monthly ($7.99/month), annual
+          Summis Pro is available as a monthly ($7.99/month), annual
           ($49.99/year), or lifetime ($79.99 one-time) subscription. Payment is
           charged to your App Store or Google Play account. Subscriptions
           automatically renew unless cancelled at least 24 hours before the end

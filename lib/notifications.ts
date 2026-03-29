@@ -56,7 +56,7 @@ export async function scheduleStreakReminder(
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: '1000x — Streak Protection',
+      title: 'Summis — Sprint Streak',
       body: `Don't break your ${streakCount}-day streak — complete ${habitTitle}!`,
       sound: true,
     },

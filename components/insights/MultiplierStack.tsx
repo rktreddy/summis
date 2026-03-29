@@ -25,7 +25,7 @@ const DOMAIN_EMOJIS: Record<string, string> = {
 export function MultiplierStack({ result, onPress }: MultiplierStackProps) {
   return (
     <Card style={styles.container} onPress={onPress}>
-      <Text style={styles.heading}>Your 1000x Stack</Text>
+      <Text style={styles.heading}>Your Performance Stack</Text>
 
       <View style={styles.domains}>
         {result.domains.map((d) => (

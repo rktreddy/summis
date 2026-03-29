@@ -1,49 +1,44 @@
 import { useRouter } from 'expo-router';
-import { GoalQuiz, type OnboardingResult } from '@/components/onboarding/GoalQuiz';
-import { getPresetsForGoal } from '@/components/onboarding/HabitPreloader';
+import { CognitiveHygieneSetup } from '@/components/onboarding/CognitiveHygieneSetup';
 import { useData } from '@/lib/data-provider';
 import { useAppStore } from '@/store/useAppStore';
+import { getDefaultHygieneConfigs } from '@/lib/hygiene-engine';
+import type { OnboardingConfig } from '@/types/summis';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const data = useData();
-  const { session, profile, setProfile, setHabits } = useAppStore();
+  const { session, profile, setProfile, setHygieneConfigs } = useAppStore();
 
-  async function handleComplete(result: OnboardingResult) {
+  async function handleComplete(config: OnboardingConfig) {
     const userId = session?.user.id;
     if (!userId) return;
 
     try {
-      const presets = getPresetsForGoal(result.goal);
+      // Create default hygiene configs
+      const defaultConfigs = getDefaultHygieneConfigs(userId);
+      // TODO: persist hygiene configs via data provider
+      // For now, set them in the store with generated IDs
+      const configsWithIds = defaultConfigs.map((c, i) => ({
+        ...c,
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+      }));
+      setHygieneConfigs(configsWithIds);
 
-      const createdHabits = await Promise.all(
-        presets.map((preset) =>
-          data.createHabit(userId, {
-            title: preset.title,
-            description: preset.description ?? undefined,
-            category: preset.category,
-            science_note: preset.science_note ?? undefined,
-            difficulty: preset.difficulty,
-          })
-        )
-      );
-
-      setHabits(createdHabits);
-
+      // Update profile with onboarding data
       await data.updateProfile(userId, {
         onboarding_completed: true,
-        user_goal: result.goal,
-        wake_time: result.wakeTime,
-        chronotype: result.chronotype,
+        wake_time: config.wakeTime,
+        chronotype: config.chronotype,
       });
 
       if (profile) {
         setProfile({
           ...profile,
           onboarding_completed: true,
-          user_goal: result.goal,
-          wake_time: result.wakeTime,
-          chronotype: result.chronotype,
+          wake_time: config.wakeTime,
+          chronotype: config.chronotype,
         });
       }
 
@@ -51,12 +46,9 @@ export default function OnboardingScreen() {
     } catch (err) {
       console.error('Onboarding error:', err);
       try {
-        await data.updateProfile(userId, {
-          onboarding_completed: true,
-          user_goal: result.goal,
-        });
+        await data.updateProfile(userId, { onboarding_completed: true });
         if (profile) {
-          setProfile({ ...profile, onboarding_completed: true, user_goal: result.goal });
+          setProfile({ ...profile, onboarding_completed: true });
         }
       } catch {
         // Last resort
@@ -65,5 +57,5 @@ export default function OnboardingScreen() {
     }
   }
 
-  return <GoalQuiz onComplete={handleComplete} />;
+  return <CognitiveHygieneSetup onComplete={handleComplete} />;
 }

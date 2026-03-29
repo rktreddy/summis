@@ -72,7 +72,7 @@ export default function SignupScreen() {
     >
       <View style={styles.inner}>
         <View style={styles.branding}>
-          <Text style={styles.logo}>1000x</Text>
+          <Text style={styles.logo}>Summis</Text>
           <Text style={styles.subtitle}>Create your account</Text>
         </View>
 
