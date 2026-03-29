@@ -1,7 +1,7 @@
 import { ScrollView, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
-const EFFECTIVE_DATE = 'March 18, 2026';
+const EFFECTIVE_DATE = 'March 28, 2026';
 const CONTACT_EMAIL = 'privacy@summis.app';
 
 export default function PrivacyPolicyScreen() {
@@ -22,10 +22,17 @@ export default function PrivacyPolicyScreen() {
           <Text style={styles.bold}>Account Information:</Text> When you create
           an account, we collect your email address, display name, and timezone.
           {'\n\n'}
-          <Text style={styles.bold}>Usage Data:</Text> We collect data about
-          your habits, journal entries, focus sessions, and performance scores
-          that you create within the App. This data is stored securely in your
-          private account and is never shared with other users.
+          <Text style={styles.bold}>Usage Data:</Text> We collect data you
+          create within the App, including: focus sprint records (duration,
+          intention text, focus quality ratings), daily Most Important Tasks,
+          cognitive hygiene compliance logs, and cognitive performance scores.
+          This data is stored securely in your private account and is never
+          shared with other users.
+          {'\n\n'}
+          <Text style={styles.bold}>Chronotype & Schedule Preferences:</Text>
+          {' '}During onboarding, you select your chronotype category and wake
+          time. This is used to compute your personalized energy windows and
+          sprint scheduling recommendations.
           {'\n\n'}
           <Text style={styles.bold}>Device Information:</Text> We may collect
           device type, operating system version, and push notification tokens to
@@ -35,9 +42,15 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.heading}>2. How We Use Your Information</Text>
         <Text style={styles.body}>
           {'\u2022'} To provide, maintain, and improve the App{'\n'}
-          {'\u2022'} To compute your performance scores and insights{'\n'}
-          {'\u2022'} To send push notifications you have opted into (streak
-          reminders, performance windows, weekly reports){'\n'}
+          {'\u2022'} To compute your cognitive performance scores and trend
+          analysis{'\n'}
+          {'\u2022'} To calculate correlations between your cognitive hygiene
+          practices and focus quality (e.g., "Focus quality 34% higher on
+          phone-away days"){'\n'}
+          {'\u2022'} To personalize sprint scheduling based on your chronotype
+          and energy phases{'\n'}
+          {'\u2022'} To send push notifications you have opted into (sprint
+          reminders, peak window alerts, streak protection){'\n'}
           {'\u2022'} To generate AI-powered insights based on your data (Pro
           feature){'\n'}
           {'\u2022'} To process subscription payments through Apple App Store or
@@ -47,10 +60,11 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.heading}>3. AI-Powered Features</Text>
         <Text style={styles.body}>
           Pro subscribers may use AI Insights, which sends anonymized usage
-          patterns (habit completion rates, mood/energy trends, focus durations)
-          to our AI provider (Anthropic) for analysis. We do not send the full
-          content of your journal entries — only summaries and metadata. You can
-          opt out of AI features at any time in your profile settings.
+          patterns (sprint completion rates, focus quality trends, hygiene
+          compliance data, correlation results) to our AI provider (Anthropic)
+          for analysis. We do not send sprint intention text or personal notes
+          — only aggregated metrics and patterns. You can opt out of AI features
+          at any time in your profile settings.
         </Text>
 
         <Text style={styles.heading}>4. Data Storage & Security</Text>
@@ -79,9 +93,12 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.heading}>6. Data Retention & Deletion</Text>
         <Text style={styles.body}>
           Your data is retained as long as your account is active. You may
-          request deletion of your account and all associated data at any time by
+          delete your account and all associated data at any time from within
+          the App (Profile → Delete Account). You may also request deletion by
           contacting us at {CONTACT_EMAIL}. Upon deletion, all your data is
-          permanently removed from our servers within 30 days.
+          permanently removed from our servers within 30 days. This includes
+          all sprint records, MITs, hygiene logs, performance scores, and
+          account information.
         </Text>
 
         <Text style={styles.heading}>7. Subscriptions</Text>
@@ -103,9 +120,14 @@ export default function PrivacyPolicyScreen() {
 
         <Text style={styles.heading}>9. Your Rights</Text>
         <Text style={styles.body}>
-          Depending on your jurisdiction, you may have rights to access, correct,
-          delete, or export your personal data. To exercise these rights, contact
-          us at {CONTACT_EMAIL}.
+          Depending on your jurisdiction, you may have rights including:{'\n\n'}
+          {'\u2022'} Access your personal data{'\n'}
+          {'\u2022'} Correct inaccurate data{'\n'}
+          {'\u2022'} Delete your data (available in-app or via email){'\n'}
+          {'\u2022'} Export your data (Pro feature){'\n'}
+          {'\u2022'} Object to data processing{'\n\n'}
+          To exercise these rights, use the in-app options or contact us at
+          {' '}{CONTACT_EMAIL}.
         </Text>
 
         <Text style={styles.heading}>10. Changes to This Policy</Text>
