@@ -1,28 +1,36 @@
-# 1000x
+# Summis
 
-A science-backed productivity and performance app for iOS and Android. Track habits, journal, run focus sessions, and view performance analytics — all grounded in peer-reviewed research (ultradian rhythms, spacing effect, circadian performance peaks, etc.).
+**The Science of Cognitive Performance**
+
+A science-backed cognitive performance coach for iOS and Android. Focus sprints, cognitive hygiene tracking, and a correlation engine that proves which practices actually improve your focus — built on Dr. Sahar Yousef's Becoming Superhuman framework and the Brain Drain study (Ward et al., 2017).
+
+## What Makes Summis Different
+
+Every digital wellness app measures inputs (less screen time). Summis measures **outputs** (did your focus actually improve?) and connects the two. After 30 days, you don't just believe you should put your phone away — you have **personalized proof** that it works.
 
 ## Features
 
-- **Onboarding Goal Quiz** — Choose your #1 goal (Focus, Sleep, Fitness, General) and get 3 pre-loaded science-backed habits
-- **Habit Tracking** — Pick a category, choose from suggestions or create your own, set Easy/Moderate/Hard difficulty. Track streaks, get milestone celebrations at 7/14/30/60/100 days. Soft delete preserves history
-- **Focus Timer** — Pomodoro-style timer (25/45/90 min) with deep work, study, creative, and admin modes. Interruption type logging (Phone/Person/Thought/Other)
-- **Journaling** — Daily reflections with mood (1-5) and energy (1-5) ratings. Pro users can export all entries as formatted text
-- **Performance Insights** (Pro) — Difficulty-weighted scoring, weekly reports with deltas, 7-day heatmaps
-- **Habit Correlation Engine** (Pro) — Pearson correlation analysis showing which habits impact your performance most
-- **AI Insights** (Pro) — Claude-powered personalized analysis from 30 days of data
-- **Science Protocols** — 7 curated routines with peer-reviewed citations
-- **Streak Sharing** — Branded share cards at milestone streaks via native share sheet
+- **Focus Sprints** — 4-phase Yousef protocol: set intention → deep focus (30/45/50 min) → genuine rest → reflection. DND integration during sprints.
+- **Cognitive Hygiene Tracking** — Track phone placement, notification management, environment setup, and more. Daily compliance scoring.
+- **Most Important Tasks (MITs)** — Set 3 MITs each morning. Link them to sprints. Track completion.
+- **Correlation Engine** (Pro) — Pearson correlation analysis proving which hygiene practices improve your focus quality. "Your focus is 23% higher on days you keep your phone in another room."
+- **Chronotype-Aware Coaching** — AM-Shifted / Bi-Phasic / PM-Shifted energy models. Sprint scheduling aligned to your peak windows.
+- **Cognitive Performance Score** — Weighted composite: sprint completion (30%), focus quality (30%), hygiene compliance (25%), MIT completion (15%).
+- **AI Insights** (Pro) — Claude-powered personalized analysis from your sprint and hygiene data.
+- **Science Protocols** — Curated routines with peer-reviewed citations.
 
 ## Tech Stack
 
-- **Framework:** React Native + Expo (SDK 55) with Expo Router
-- **Backend:** Supabase (Auth, Postgres, Edge Functions)
-- **Subscriptions:** RevenueCat
-- **State:** Zustand
-- **Charts:** Victory Native + custom View-based charts
-- **Animations:** React Native Reanimated
-- **Testing:** Jest (37 tests)
+| Layer | Tool |
+|---|---|
+| Framework | React Native + Expo (SDK 55), Expo Router |
+| Language | TypeScript (strict mode) |
+| Backend | Supabase (Auth, Postgres, Edge Functions) |
+| Subscriptions | RevenueCat |
+| State | Zustand |
+| Charts | Victory Native + custom View-based charts |
+| Animations | React Native Reanimated |
+| Testing | Jest (206 tests across 17 suites) |
 
 ## Getting Started
 
@@ -30,7 +38,7 @@ A science-backed productivity and performance app for iOS and Android. Track hab
 
 - Node.js 18+
 - [Expo CLI](https://docs.expo.dev/get-started/installation/)
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (for local development)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (for backend)
 - iOS Simulator (macOS) or Android Emulator
 
 ### Setup
@@ -42,8 +50,11 @@ npm install
 # Copy environment variables and fill in your keys
 cp .env.example .env.local
 
-# Push database migrations (5 migration files)
+# Push database migrations (16 migration files)
 npm run db:push
+
+# Deploy edge functions
+npm run deploy:functions
 
 # Start development server
 npm start
@@ -75,7 +86,7 @@ EXPO_PUBLIC_MIXPANEL_TOKEN=        # Mixpanel token (optional)
 | `npm run ios` | Run on iOS simulator |
 | `npm run android` | Run on Android emulator |
 | `npm run typecheck` | Run TypeScript type checking |
-| `npm test` | Run Jest test suite (37 tests) |
+| `npm test` | Run Jest test suite (206 tests) |
 | `npm run build:ios` | Production build for App Store (EAS) |
 | `npm run build:android` | Production build for Play Store (EAS) |
 | `npm run db:push` | Push Supabase migrations |
@@ -84,34 +95,40 @@ EXPO_PUBLIC_MIXPANEL_TOKEN=        # Mixpanel token (optional)
 ## Project Structure
 
 ```
-app/              # Expo Router screens (auth, onboarding, tabs, modals)
-components/       # UI components (habits, focus, journal, insights, onboarding, social)
-hooks/            # Custom React hooks for data fetching
-lib/              # Supabase client, RevenueCat, science calculations, correlation engine
+app/              # Expo Router screens (auth, onboarding, 3 tabs, modals)
+components/       # UI components (sprint, today, score, onboarding, ui)
+hooks/            # Custom hooks (useSprints, useMITs, useHygieneScore, etc.)
+lib/              # Core logic (sprint-protocol, hygiene-engine, chronotype-engine,
+                  #   correlation-engine, data-provider, features, date-utils)
 store/            # Zustand global state
-types/            # Shared TypeScript types
-supabase/         # Migrations (5) and Edge Functions (3)
-__tests__/        # Jest tests (science, date-utils, correlation-engine)
+types/            # TypeScript types (index.ts + summis.ts)
+constants/        # Colors, Spacing, Typography
+supabase/         # Migrations (16) and Edge Functions (4)
+__tests__/        # Jest tests (17 suites, 206 tests)
 ```
 
-## Database Migrations
+## Database
 
-| File | Description |
-|---|---|
-| `001_initial_schema.sql` | 6 tables: profiles, habits, habit_completions, journal_entries, focus_sessions, performance_scores |
-| `002_onboarding_goals.sql` | Adds `user_goal` column to profiles |
-| `003_habit_difficulty.sql` | Adds `difficulty` column to habits |
-| `004_interruption_types.sql` | Adds `interruption_types[]` to focus_sessions |
-| `005_daily_scores.sql` | New `daily_scores` table for correlation engine |
+16 migrations covering:
+- Core tables: profiles, sprints, mits, hygiene_configs, hygiene_logs
+- Legacy tables: habits, habit_completions, journal_entries, focus_sessions (kept for data migration)
+- Supporting: performance_scores, daily_scores, daily_plans
+- Constraints: text length limits, enum validation, RLS on all tables
 
 ## Subscription Plans
 
 | Plan | Price | Features |
 |---|---|---|
-| Free | $0 | Up to 5 habits, journal, focus timer, basic streaks, 3 protocols |
-| Pro Monthly | $7.99/mo | Unlimited habits, AI insights, analytics, correlation engine, all protocols |
+| Free | $0 | 3 sprints/day, MITs, 3 hygiene practices, basic score |
+| Pro Monthly | $7.99/mo | Unlimited sprints, correlation insights, AI insights, trend analysis, all protocols |
 | Pro Annual | $49.99/yr | Same as Pro (~48% savings) |
 | Lifetime | $79.99 | Permanent Pro access |
+
+## Research Foundation
+
+- **Ward, Duke, Gneezy & Bos (2017)** — "Brain Drain: The Mere Presence of One's Own Smartphone Reduces Available Cognitive Capacity"
+- **Bailenson (2021)** — "Nonverbal Overload: A Theoretical Argument for the Causes of Zoom Fatigue"
+- **Dr. Sahar Yousef** — "Becoming Superhuman" curriculum, UC Berkeley Haas School of Business
 
 ## License
 
