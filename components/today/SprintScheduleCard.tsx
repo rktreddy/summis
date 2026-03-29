@@ -64,7 +64,7 @@ export function SprintScheduleCard({
             <View key={sprint.id} style={styles.sprintItem}>
               <Text style={styles.sprintIndex}>#{i + 1}</Text>
               <Text style={styles.sprintIntention} numberOfLines={1}>{sprint.intention}</Text>
-              <View style={styles.qualityDot}>
+              <View style={styles.qualityDot} accessibilityLabel={`Focus quality rating: ${sprint.focus_quality ?? 'not rated'}`}>
                 <Text style={styles.qualityText}>{sprint.focus_quality ?? '-'}</Text>
               </View>
             </View>

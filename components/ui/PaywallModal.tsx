@@ -87,7 +87,7 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.content}>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -125,6 +125,8 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
                       key={pkg.identifier}
                       style={[styles.packageCard, isSelected && styles.packageSelected]}
                       onPress={() => setSelectedIndex(idx)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
                       accessibilityLabel={`Select ${pkg.product.title}`}
                     >
                       {isAnnual && (

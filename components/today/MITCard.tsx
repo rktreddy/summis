@@ -17,6 +17,7 @@ export function MITCard({ mit, onToggle, onDelete }: MITCardProps) {
         onPress={() => onToggle(mit.id)}
         accessibilityLabel={`${mit.completed ? 'Uncheck' : 'Complete'} ${mit.title}`}
         accessibilityRole="checkbox"
+        accessibilityState={{ checked: mit.completed }}
       >
         <Ionicons
           name={mit.completed ? 'checkbox' : 'square-outline'}

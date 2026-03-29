@@ -51,13 +51,15 @@ export function MITEntry({ onAdd, slotsRemaining }: MITEntryProps) {
         accessibilityLabel="MIT title"
       />
 
-      <View style={styles.timeRow}>
+      <View style={styles.timeRow} accessibilityRole="radiogroup" accessibilityLabel="Estimated time presets">
         <Text style={styles.timeLabel}>Estimated time:</Text>
         {TIME_PRESETS.map((mins) => (
           <TouchableOpacity
             key={mins}
             style={[styles.timeBtn, estimatedMinutes === mins && styles.timeBtnActive]}
             onPress={() => setEstimatedMinutes(mins)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: estimatedMinutes === mins }}
             accessibilityLabel={`${mins} minutes`}
           >
             <Text style={[styles.timeText, estimatedMinutes === mins && styles.timeTextActive]}>

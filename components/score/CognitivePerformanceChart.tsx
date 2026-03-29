@@ -36,7 +36,7 @@ export function CognitivePerformanceChart({ scores, title = 'Performance Trend' 
           return (
             <View key={score.date} style={styles.barCol}>
               <Text style={styles.barValue}>{score.overallScore}</Text>
-              <View style={[styles.bar, { height, backgroundColor: color }]} />
+              <View style={[styles.bar, { height, backgroundColor: color }]} accessibilityLabel={`${dayLabel}: score ${score.overallScore}`} />
               <Text style={styles.barLabel}>{dayLabel}</Text>
             </View>
           );

@@ -49,7 +49,7 @@ export function HygieneCorrelationCard({ correlation }: HygieneCorrelationCardPr
         </View>
       </View>
 
-      <View style={styles.complianceBar}>
+      <View style={styles.complianceBar} accessibilityLabel={`Compliance rate: ${Math.round(correlation.complianceRate * 100)}%`} accessibilityRole="progressbar">
         <View style={[styles.complianceFill, { width: `${Math.round(correlation.complianceRate * 100)}%` }]} />
       </View>
       <Text style={styles.complianceLabel}>

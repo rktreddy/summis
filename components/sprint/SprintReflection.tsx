@@ -27,7 +27,7 @@ export function SprintReflection({ intention, onComplete }: SprintReflectionProp
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Focus Quality</Text>
-        <View style={styles.qualityRow}>
+        <View style={styles.qualityRow} accessibilityRole="radiogroup" accessibilityLabel="Focus quality rating">
           {[1, 2, 3, 4, 5].map((rating) => (
             <TouchableOpacity
               key={rating}
@@ -36,6 +36,8 @@ export function SprintReflection({ intention, onComplete }: SprintReflectionProp
                 focusQuality === rating && styles.qualityBtnActive,
               ]}
               onPress={() => setFocusQuality(rating)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: focusQuality === rating }}
               accessibilityLabel={`Focus quality ${rating}: ${FOCUS_QUALITY_LABELS[rating]}`}
             >
               <Text
@@ -61,7 +63,7 @@ export function SprintReflection({ intention, onComplete }: SprintReflectionProp
         <Text style={styles.intentionReminder} numberOfLines={2}>
           "{intention}"
         </Text>
-        <View style={styles.intentionRow}>
+        <View style={styles.intentionRow} accessibilityRole="radiogroup" accessibilityLabel="Did you accomplish your intention">
           {(Object.entries(INTENTION_MET_LABELS) as [keyof typeof INTENTION_MET_LABELS, string][]).map(
             ([key, label]) => (
               <TouchableOpacity
@@ -71,6 +73,8 @@ export function SprintReflection({ intention, onComplete }: SprintReflectionProp
                   intentionMet === key && styles.intentionBtnActive,
                 ]}
                 onPress={() => setIntentionMet(key)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: intentionMet === key }}
                 accessibilityLabel={`Intention: ${label}`}
               >
                 <Text

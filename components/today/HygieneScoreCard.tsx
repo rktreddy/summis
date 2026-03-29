@@ -15,7 +15,7 @@ export function HygieneScoreCard({ score, activeCount, compliantCount, onPress }
 
   return (
     <Card style={styles.container} onPress={onPress}>
-      <View style={styles.row}>
+      <View style={styles.row} accessibilityLabel={`Cognitive hygiene score: ${score}%. ${compliantCount} of ${activeCount} practices followed`}>
         <ProgressRing progress={score / 100} size={64} color={color} />
         <View style={styles.info}>
           <Text style={styles.label}>Cognitive Hygiene</Text>
