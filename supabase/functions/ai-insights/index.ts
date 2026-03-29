@@ -3,6 +3,7 @@
 // Requires ANTHROPIC_API_KEY in Supabase secrets.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { handleCorsPreFlight, corsHeaders, isRateLimited } from '../_shared/cors.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 
@@ -34,13 +35,20 @@ function createServiceClient() {
 }
 
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
+  const preflightResponse = handleCorsPreFlight(req);
+  if (preflightResponse) return preflightResponse;
+
+  const origin = req.headers.get('Origin');
+  const headers = corsHeaders(origin);
+
   try {
     // Verify auth token
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Missing or invalid authorization header' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        { status: 401, headers }
       );
     }
 
@@ -51,7 +59,7 @@ Deno.serve(async (req: Request) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        { status: 401, headers }
       );
     }
 
@@ -60,7 +68,15 @@ Deno.serve(async (req: Request) => {
     if (!user_id || user_id !== user.id) {
       return new Response(
         JSON.stringify({ error: 'user_id required and must match authenticated user' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
+        { status: 403, headers }
+      );
+    }
+
+    // Rate limit: 5 requests per hour per user
+    if (isRateLimited(user.id, 5)) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded. Try again later.' }),
+        { status: 429, headers }
       );
     }
 
@@ -74,14 +90,14 @@ Deno.serve(async (req: Request) => {
     if (!profile || profile.subscription_tier === 'free') {
       return new Response(
         JSON.stringify({ error: 'AI Insights requires a Pro subscription' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
+        { status: 403, headers }
       );
     }
 
     if (!ANTHROPIC_API_KEY) {
       return new Response(
         JSON.stringify({ insights: getFallbackInsights() }),
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers }
       );
     }
 
@@ -181,7 +197,7 @@ Use language like "your data suggests" or "on days when you X, your focus tends 
       console.error('Claude API error status:', response.status);
       return new Response(
         JSON.stringify({ insights: getFallbackInsights() }),
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers }
       );
     }
 
@@ -202,7 +218,7 @@ Use language like "your data suggests" or "on days when you X, your focus tends 
     console.error('AI insights error:', error);
     return new Response(
       JSON.stringify({ error: 'An internal error occurred', insights: getFallbackInsights() }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers }
     );
   }
 });

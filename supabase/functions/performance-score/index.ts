@@ -3,6 +3,7 @@
 // Trigger: cron (weekly) or on-demand via POST with { user_id }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { handleCorsPreFlight, corsHeaders } from '../_shared/cors.ts';
 
 const CRON_SECRET = Deno.env.get('CRON_SECRET');
 
@@ -20,6 +21,12 @@ function createUserClient(authHeader: string) {
 }
 
 Deno.serve(async (req: Request) => {
+  const preflightResponse = handleCorsPreFlight(req);
+  if (preflightResponse) return preflightResponse;
+
+  const origin = req.headers.get('Origin');
+  const headers = corsHeaders(origin);
+
   try {
     const authHeader = req.headers.get('Authorization');
     const cronHeader = req.headers.get('X-Cron-Secret');
@@ -33,7 +40,7 @@ Deno.serve(async (req: Request) => {
       if (!authHeader?.startsWith('Bearer ')) {
         return new Response(
           JSON.stringify({ error: 'Missing authorization' }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
+          { status: 401, headers }
         );
       }
 
@@ -43,7 +50,7 @@ Deno.serve(async (req: Request) => {
       if (authError || !user || user.id !== body.user_id) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
+          { status: 401, headers }
         );
       }
 
@@ -53,7 +60,7 @@ Deno.serve(async (req: Request) => {
       if (!CRON_SECRET || cronHeader !== CRON_SECRET) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
+          { status: 401, headers }
         );
       }
 
@@ -153,13 +160,13 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(JSON.stringify({ success: true, results }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers,
     });
   } catch (error) {
     console.error('Performance score error:', error);
     return new Response(
       JSON.stringify({ success: false, error: 'An internal error occurred' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers }
     );
   }
 });

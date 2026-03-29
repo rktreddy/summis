@@ -6,6 +6,7 @@
 // Validate via CRON_SECRET header to prevent unauthorized batch triggers.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { handleCorsPreFlight, corsHeaders } from '../_shared/cors.ts';
 
 const CRON_SECRET = Deno.env.get('CRON_SECRET');
 
@@ -22,6 +23,12 @@ interface ReportResult {
 }
 
 Deno.serve(async (req: Request) => {
+  const preflightResponse = handleCorsPreFlight(req);
+  if (preflightResponse) return preflightResponse;
+
+  const origin = req.headers.get('Origin');
+  const headers = corsHeaders(origin);
+
   try {
     // Validate cron invocation with shared secret
     const cronHeader = req.headers.get('X-Cron-Secret');
@@ -31,7 +38,7 @@ Deno.serve(async (req: Request) => {
       if (!authHeader?.startsWith('Bearer ')) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
+          { status: 401, headers }
         );
       }
     }
@@ -123,13 +130,13 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(JSON.stringify({ success: true, reports }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers,
     });
   } catch (error) {
     console.error('Weekly report error:', error);
     return new Response(
       JSON.stringify({ success: false, error: 'An internal error occurred' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers }
     );
   }
 });
