@@ -57,7 +57,7 @@
         {
           "backgroundColor": "#0A0A0F",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200
+          "imageWidth": 280
         }
       ],
       "@sentry/react-native"
