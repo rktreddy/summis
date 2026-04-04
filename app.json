@@ -67,15 +67,16 @@
     },
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
-      }
+        "projectId": "6af066f2-7645-4e29-97fa-ff7bd10357ac"
+      },
+      "router": {}
     },
-    "owner": "summis",
+    "owner": "rktreddy",
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/your-eas-project-id"
+      "url": "https://u.expo.dev/6af066f2-7645-4e29-97fa-ff7bd10357ac"
     }
   }
 }
