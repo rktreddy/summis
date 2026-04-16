@@ -31,9 +31,13 @@ export function useMITs() {
       const userId = session?.user?.id;
       if (!userId || !canAddMIT) return null;
 
+      const trimmedTitle = title.trim();
+      if (!trimmedTitle) return null;
+      if (trimmedTitle.length > 200) return null;
+
       const mitData = {
         date: todayStr,
-        title,
+        title: trimmedTitle,
         estimated_minutes: estimatedMinutes,
         sort_order: todayMITs.length + 1,
       };

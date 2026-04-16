@@ -182,7 +182,8 @@ export function computeHygieneCorrelations(
       const avgCompliant = compliantDays.length > 0 ? compliantDays.reduce((a, b) => a + b, 0) / compliantDays.length : 0;
       const avgNonCompliant = nonCompliantDays.length > 0 ? nonCompliantDays.reduce((a, b) => a + b, 0) / nonCompliantDays.length : 0;
 
-      const percentDiff = avgNonCompliant !== 0 ? Math.round(((avgCompliant - avgNonCompliant) / avgNonCompliant) * 100) : 0;
+      const rawPercentDiff = avgNonCompliant !== 0 ? ((avgCompliant - avgNonCompliant) / avgNonCompliant) * 100 : 0;
+      const percentDiff = Math.round(Math.min(Math.abs(rawPercentDiff), 500)) * (rawPercentDiff >= 0 ? 1 : -1);
 
       if (r > 0.1) {
         insightText = `On days you ${config.label}, your focus quality tends to be ${Math.abs(percentDiff)}% higher.`;

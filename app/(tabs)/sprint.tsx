@@ -41,6 +41,7 @@ export default function SprintScreen() {
   const [interruptions, setInterruptions] = useState(0);
   const [interruptionTypes, setInterruptionTypes] = useState<string[]>([]);
   const [showInterruptionLogger, setShowInterruptionLogger] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentPhase: SprintPhase | 'idle' = activeSprint?.phase ?? 'idle';
@@ -115,6 +116,8 @@ export default function SprintScreen() {
 
   // Handle starting a sprint from intention phase
   async function handleStartSprint(intention: string, hygieneChecks: Record<string, boolean>, mitId?: string) {
+    if (isStarting) return;
+    setIsStarting(true);
     try {
       const sprint = await startSprint({
         intention,
@@ -132,6 +135,8 @@ export default function SprintScreen() {
       }
     } catch (err) {
       console.error('Failed to start sprint:', err);
+    } finally {
+      setIsStarting(false);
     }
   }
 

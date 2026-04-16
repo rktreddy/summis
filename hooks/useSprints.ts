@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { getTodayString } from '@/lib/date-utils';
+import { canStartSprint } from '@/lib/features';
 import { scheduleStreakReminder } from '@/lib/notifications';
 import type { Sprint, SprintPhase } from '@/types/summis';
 
@@ -61,6 +62,18 @@ export function useSprints() {
     }): Promise<Sprint> => {
       const userId = session?.user?.id;
       if (!userId) throw new Error('Not authenticated');
+
+      // Validate intention
+      const trimmedIntention = params.intention.trim();
+      if (!trimmedIntention) throw new Error('Intention cannot be empty');
+      if (trimmedIntention.length > 500) throw new Error('Intention too long (max 500 characters)');
+
+      // Enforce sprint limit server-side check
+      const profile = useAppStore.getState().profile;
+      const tier = (profile?.subscription_tier ?? 'free') as 'free' | 'pro' | 'lifetime';
+      if (!canStartSprint(tier, todaySprints.length)) {
+        throw new Error('Daily sprint limit reached. Upgrade to Pro for unlimited sprints.');
+      }
 
       const sprintData = {
         date: todayStr,
@@ -131,6 +144,9 @@ export function useSprints() {
         interruption_types: reflection.interruptionTypes,
       };
 
+      // Save previous state for rollback
+      const previousSprint = sprints.find((s) => s.id === sprintId);
+
       // Optimistic update
       updateSprint(sprintId, updates);
       setActiveSprint(null);
@@ -139,7 +155,21 @@ export function useSprints() {
       try {
         await data.updateSprint(sprintId, updates);
       } catch (err) {
-        setError('Sprint completion saved locally but failed to sync.');
+        // Rollback on failure
+        if (previousSprint) {
+          updateSprint(sprintId, {
+            phase: previousSprint.phase,
+            completed: previousSprint.completed,
+            ended_at: previousSprint.ended_at,
+            focus_quality: previousSprint.focus_quality,
+            intention_met: previousSprint.intention_met,
+            reflection_note: previousSprint.reflection_note,
+            interruptions: previousSprint.interruptions,
+            interruption_types: previousSprint.interruption_types,
+          });
+          setActiveSprint(previousSprint);
+        }
+        setError('Sprint completion failed to sync. Change has been reverted.');
       }
 
       // Schedule streak reminder for tomorrow if streak is active
@@ -151,7 +181,7 @@ export function useSprints() {
         scheduleStreakReminder('a focus sprint', uniqueDays).catch(console.warn);
       }
     },
-    [updateSprint, setActiveSprint, setError, data]
+    [sprints, updateSprint, setActiveSprint, setError, data]
   );
 
   const updatePhase = useCallback(

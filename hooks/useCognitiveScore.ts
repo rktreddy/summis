@@ -85,8 +85,10 @@ export function useCognitiveScore() {
       const daySprints = sprints.filter((s) => s.date === date && s.completed);
       const dayMITs = mits.filter((m) => m.date === date);
 
-      const avgFocus = daySprints.length > 0
-        ? daySprints.reduce((sum, s) => sum + (s.focus_quality ?? 0), 0) / daySprints.length
+      // Only include sprints that have a focus quality rating (filter out nulls)
+      const ratedSprints = daySprints.filter((s) => s.focus_quality !== null);
+      const avgFocus = ratedSprints.length > 0
+        ? ratedSprints.reduce((sum, s) => sum + (s.focus_quality as number), 0) / ratedSprints.length
         : null;
 
       const hygieneScore = computeHygieneScore(hygieneConfigs, hygieneLogs, date);

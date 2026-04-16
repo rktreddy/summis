@@ -115,6 +115,7 @@ export function SprintIntention({ onStart, hygieneConfigs, todayMITs = [], chron
         multiline
         numberOfLines={3}
         textAlignVertical="top"
+        maxLength={500}
         accessibilityLabel="Sprint intention"
       />
 

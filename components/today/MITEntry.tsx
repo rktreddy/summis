@@ -48,6 +48,7 @@ export function MITEntry({ onAdd, slotsRemaining }: MITEntryProps) {
         autoFocus
         onSubmitEditing={handleAdd}
         returnKeyType="done"
+        maxLength={200}
         accessibilityLabel="MIT title"
       />
 

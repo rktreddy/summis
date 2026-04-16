@@ -8,7 +8,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 export const corsHeaders = (origin: string | null): Record<string, string> => {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some((o) => origin.startsWith(o))
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin)
     ? origin
     : ALLOWED_ORIGINS[0];
 
@@ -17,6 +17,8 @@ export const corsHeaders = (origin: string | null): Record<string, string> => {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Cron-Secret',
     'Content-Type': 'application/json',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
   };
 };
 
