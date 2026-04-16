@@ -60,7 +60,6 @@
           "imageWidth": 280
         }
       ],
-      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true

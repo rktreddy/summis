@@ -90,6 +90,10 @@ function RootLayoutInner() {
         initRevenueCat(s.user.id).catch(console.warn);
       }
       setIsReady(true);
+    }).catch((err: unknown) => {
+      console.error('Failed to get session:', err);
+      setSession(null);
+      setIsReady(true);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, s: { user: { id: string } } | null) => {
