@@ -5,21 +5,26 @@
 import * as Sentry from '@sentry/react-native';
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
+const isSentryEnabled = SENTRY_DSN.startsWith('https://');
 
 export function initErrorLogging(): void {
-  if (!SENTRY_DSN) {
-    console.warn('Sentry: EXPO_PUBLIC_SENTRY_DSN not set, error logging disabled');
+  if (!isSentryEnabled) {
+    console.warn('Sentry: EXPO_PUBLIC_SENTRY_DSN not configured, error logging disabled');
     return;
   }
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    tracesSampleRate: 0.2,
-    enableAutoSessionTracking: true,
-  });
+  try {
+    Sentry.init({
+      dsn: SENTRY_DSN,
+      tracesSampleRate: 0.2,
+      enableAutoSessionTracking: true,
+    });
+  } catch (err) {
+    console.warn('Sentry initialization failed:', err);
+  }
 }
 
 export function captureException(error: unknown, context?: Record<string, string>): void {
-  if (!SENTRY_DSN) {
+  if (!isSentryEnabled) {
     console.error('[Error]', error instanceof Error ? error.message : String(error), context);
     return;
   }
@@ -36,11 +41,11 @@ export function captureException(error: unknown, context?: Record<string, string
 }
 
 export function setUser(userId: string, email?: string): void {
-  if (!SENTRY_DSN) return;
+  if (!isSentryEnabled) return;
   Sentry.setUser({ id: userId, email });
 }
 
 export function clearUser(): void {
-  if (!SENTRY_DSN) return;
+  if (!isSentryEnabled) return;
   Sentry.setUser(null);
 }
