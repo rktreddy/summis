@@ -18,15 +18,15 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+  const existing = await Notifications.getPermissionsAsync() as { status: string; granted: boolean };
+  let isGranted = existing.status === 'granted' || existing.granted;
 
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
+  if (!isGranted) {
+    const requested = await Notifications.requestPermissionsAsync() as { status: string; granted: boolean };
+    isGranted = requested.status === 'granted' || requested.granted;
   }
 
-  if (finalStatus !== 'granted') {
+  if (!isGranted) {
     return null;
   }
 

@@ -48,7 +48,10 @@ function RootLayoutInner() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-  const { session, profile, setSession, setProfile, setHabits } = useAppStore();
+  const {
+    session, profile, setSession, setProfile, setHabits,
+    setSprints, setMITs, setHygieneConfigs, setHygieneLogs,
+  } = useAppStore();
   const [isReady, setIsReady] = useState(false);
   const data = useData();
 
@@ -68,6 +71,7 @@ function RootLayoutInner() {
           data.fetchHabits(s.user.id).then((h) => {
             setHabits(h);
           });
+          fetchSummisData(s.user.id);
         }
         setIsReady(true);
       });
@@ -81,6 +85,7 @@ function RootLayoutInner() {
       setSession(s ? { user: { id: s.user.id } } : null);
       if (s) {
         fetchProfile(s.user.id);
+        fetchSummisData(s.user.id);
         setUser(s.user.id);
         initRevenueCat(s.user.id).catch(console.warn);
       }
@@ -91,6 +96,7 @@ function RootLayoutInner() {
       setSession(s ? { user: { id: s.user.id } } : null);
       if (s) {
         fetchProfile(s.user.id);
+        fetchSummisData(s.user.id);
         setUser(s.user.id);
       } else {
         setProfile(null);
@@ -115,6 +121,23 @@ function RootLayoutInner() {
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
+    }
+  }
+
+  async function fetchSummisData(userId: string) {
+    try {
+      const [sprints, mits, configs, logs] = await Promise.all([
+        data.fetchSprints(userId),
+        data.fetchMITs(userId),
+        data.fetchHygieneConfigs(userId),
+        data.fetchHygieneLogs(userId),
+      ]);
+      setSprints(sprints);
+      setMITs(mits);
+      setHygieneConfigs(configs);
+      setHygieneLogs(logs);
+    } catch (err) {
+      console.error('Error loading Summis data:', err);
     }
   }
 

@@ -93,11 +93,15 @@ export function useMITs() {
   );
 
   const deleteMIT = useCallback(
-    (id: string) => {
+    async (id: string) => {
       removeMIT(id);
-      // TODO: add data.deleteMIT when available
+      try {
+        await data.deleteMIT(id);
+      } catch (err) {
+        setError('MIT deleted locally but failed to sync.');
+      }
     },
-    [removeMIT]
+    [removeMIT, setError, data]
   );
 
   return {

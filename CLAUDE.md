@@ -377,28 +377,31 @@ EXPO_PUBLIC_MIXPANEL_TOKEN=      # Scaffolded
 
 ## Development Status
 
-### Inherited from 1000x (working)
-- [x] Expo + Router + TypeScript strict mode
-- [x] Supabase auth (email + Apple Sign-In)
-- [x] RevenueCat paywall (3 plans, restore)
-- [x] Error boundary + inline error banners
-- [x] DataProvider abstraction (Supabase + Mock)
-- [x] Focus timer (basis for Sprint timer)
-- [x] Correlation engine (needs retargeting)
-- [x] Science calculations + protocols
-- [x] Push notifications
-- [x] 37 passing tests
+### Summis Redesign — Complete
+- [x] Phase 1: Identity + Structure (types, tabs, store, migration, data loading)
+- [x] Phase 2: Core Sprint Experience (4-phase flow, MIT linking, sprint recovery)
+- [x] Phase 3: Today Tab + MITs (hygiene checklist, evening reflection)
+- [x] Phase 4: Cognitive Hygiene Onboarding (7-step flow with notification audit, wake time)
+- [x] Phase 5: Score Tab + Correlation Engine (30-day chart, hygiene correlations, time-of-day)
+- [x] Phase 6: DND Integration + Polish (notifications wired, tests, Ward et al. protocol)
+- [x] Phase 7: Store Preparation (code complete; external accounts pending)
 
-### Summis Redesign — In Progress
-- [ ] Phase 1: Identity + Structure (app.json, package.json, tabs, types)
-- [ ] Phase 2: Core Sprint Experience (4-phase sprint flow)
-- [ ] Phase 3: Today Tab + MITs
-- [ ] Phase 4: Cognitive Hygiene Onboarding
-- [ ] Phase 5: Score Tab + Correlation Engine retarget
-- [ ] Phase 6: DND Integration + Polish
-- [ ] Phase 7: Store Preparation
+### Current Stats
+- 215 passing tests across 18 test suites
+- TypeScript strict mode — zero errors
+- All features implemented and wired end-to-end
 
-See `SUMMIS-REDESIGN-PLAN.md` for full implementation plan with file-by-file mapping.
+### Remaining (External Setup)
+- [ ] Supabase: verify migrations applied, deploy Edge Functions, set secrets
+- [ ] RevenueCat account + product configuration
+- [ ] Apple Developer account + App Store Connect setup
+- [x] Google Play Developer account (already registered)
+- [ ] Google Play Console: create app, billing products, service account
+- [ ] Device testing + screenshots
+- [ ] TestFlight beta → App Store / Play Store submission
+
+See `SUMMIS-REDESIGN-PLAN.md` for detailed implementation plan.
+See `tasks/smoke-test.md` for pre-submission testing checklist.
 
 ---
 

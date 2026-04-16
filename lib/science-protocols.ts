@@ -178,6 +178,24 @@ export const SCIENCE_PROTOCOLS: ScienceProtocol[] = [
     durationMinutes: 3,
     tier: 'free',
   },
+  {
+    id: 'phone-cognitive-load',
+    title: 'Phone Presence & Cognitive Load',
+    category: 'focus',
+    summary:
+      'The mere presence of your smartphone — even when silent, face-down, and unused — measurably reduces available working memory and fluid intelligence. Physical separation is the only reliable countermeasure.',
+    citation:
+      'Ward, Duke, Gneezy & Bos (2017). Brain Drain: The Mere Presence of One\'s Own Smartphone Reduces Available Cognitive Capacity. Journal of the Association for Consumer Research, 2(2), 140-154.',
+    steps: [
+      'During focus sprints, move your phone to another room (highest impact)',
+      'If another room isn\'t possible, place it in a drawer or bag — out of sight',
+      'Disable all non-essential notifications permanently, not just during sprints',
+      'Use Summis\'s correlation engine to track your focus on phone-away vs phone-present days',
+      'Review your data after 30 days to see the measured difference in your own performance',
+    ],
+    durationMinutes: null,
+    tier: 'free',
+  },
 ];
 
 export function getProtocolsByCategory(category: string): ScienceProtocol[] {

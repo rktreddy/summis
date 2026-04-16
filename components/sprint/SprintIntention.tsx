@@ -5,18 +5,19 @@ import { Colors } from '@/constants/Colors';
 import { Button } from '@/components/ui/Button';
 import { getWorkTypeSuggestion } from '@/lib/sprint-protocol';
 import { ENERGY_PHASE_INFO } from '@/lib/chronotype-engine';
-import type { HygieneConfig, ChronotypeCategory } from '@/types/summis';
+import type { HygieneConfig, MIT, ChronotypeCategory } from '@/types/summis';
 
 interface SprintIntentionProps {
-  onStart: (intention: string, hygieneChecks: Record<string, boolean>) => void;
+  onStart: (intention: string, hygieneChecks: Record<string, boolean>, mitId?: string) => void;
   hygieneConfigs: HygieneConfig[];
-  linkedMITTitle?: string;
+  todayMITs?: MIT[];
   chronotype?: ChronotypeCategory;
   wakeTime?: string;
 }
 
-export function SprintIntention({ onStart, hygieneConfigs, linkedMITTitle, chronotype, wakeTime }: SprintIntentionProps) {
-  const [intention, setIntention] = useState(linkedMITTitle ?? '');
+export function SprintIntention({ onStart, hygieneConfigs, todayMITs = [], chronotype, wakeTime }: SprintIntentionProps) {
+  const [intention, setIntention] = useState('');
+  const [selectedMitId, setSelectedMitId] = useState<string | null>(null);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
 
   const activeConfigs = hygieneConfigs.filter((c) => c.is_active);
@@ -64,10 +65,51 @@ export function SprintIntention({ onStart, hygieneConfigs, linkedMITTitle, chron
         </View>
       )}
 
+      {/* MIT picker — link a sprint to today's MIT */}
+      {todayMITs.length > 0 && (
+        <View style={styles.mitSection}>
+          <Text style={styles.mitSectionTitle}>Link to MIT</Text>
+          <View style={styles.mitChips}>
+            {todayMITs.filter((m) => !m.completed).map((mit) => (
+              <TouchableOpacity
+                key={mit.id}
+                style={[styles.mitChip, selectedMitId === mit.id && styles.mitChipSelected]}
+                onPress={() => {
+                  if (selectedMitId === mit.id) {
+                    setSelectedMitId(null);
+                    setIntention('');
+                  } else {
+                    setSelectedMitId(mit.id);
+                    setIntention(mit.title);
+                  }
+                }}
+                accessibilityLabel={`Link to MIT: ${mit.title}`}
+                accessibilityRole="radio"
+              >
+                <Ionicons
+                  name={selectedMitId === mit.id ? 'radio-button-on' : 'radio-button-off'}
+                  size={18}
+                  color={selectedMitId === mit.id ? Colors.accent : Colors.textSecondary}
+                />
+                <Text
+                  style={[styles.mitChipText, selectedMitId === mit.id && styles.mitChipTextSelected]}
+                  numberOfLines={1}
+                >
+                  {mit.title}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
       <TextInput
         style={styles.input}
         value={intention}
-        onChangeText={setIntention}
+        onChangeText={(text) => {
+          setIntention(text);
+          if (selectedMitId) setSelectedMitId(null);
+        }}
         placeholder="e.g., Draft the Q2 project proposal introduction"
         placeholderTextColor={Colors.textSecondary}
         multiline
@@ -111,7 +153,7 @@ export function SprintIntention({ onStart, hygieneConfigs, linkedMITTitle, chron
       <View style={styles.footer}>
         <Button
           title="Begin Sprint"
-          onPress={() => onStart(intention.trim(), checks)}
+          onPress={() => onStart(intention.trim(), checks, selectedMitId ?? undefined)}
           disabled={!canStart}
           accessibilityLabel="Begin focus sprint"
         />
@@ -249,5 +291,42 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  // MIT picker
+  mitSection: {
+    marginBottom: 16,
+  },
+  mitSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    marginBottom: 8,
+  },
+  mitChips: {
+    gap: 8,
+  },
+  mitChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  mitChipSelected: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent + '15',
+  },
+  mitChipText: {
+    fontSize: 15,
+    color: Colors.text,
+    flex: 1,
+  },
+  mitChipTextSelected: {
+    color: Colors.accent,
+    fontWeight: '600',
   },
 });

@@ -51,7 +51,21 @@ export interface DataProvider {
   // Profile updates
   updateProfile(
     userId: string,
-    updates: { onboarding_completed?: boolean; user_goal?: string; wake_time?: string; chronotype?: string }
+    updates: {
+      onboarding_completed?: boolean;
+      user_goal?: string;
+      wake_time?: string;
+      chronotype?: string;
+      sprint_duration_preference?: number;
+      daily_sprint_target?: number;
+      phone_placement_commitment?: string;
+      peak_window_start?: string;
+      peak_window_end?: string;
+      afternoon_window_start?: string;
+      afternoon_window_end?: string;
+      notification_audit_completed?: boolean;
+      hygiene_setup_completed?: boolean;
+    }
   ): Promise<void>;
 
   // Habits
@@ -131,7 +145,7 @@ export interface DataProvider {
   updateSprint(sprintId: string, updates: Partial<Sprint>): Promise<void>;
 
   // ── Summis: MITs ──
-  fetchMITs(userId: string, date: string): Promise<MIT[]>;
+  fetchMITs(userId: string, date?: string): Promise<MIT[]>;
   createMIT(userId: string, data: { date: string; title: string; estimated_minutes: number; sort_order: number }): Promise<MIT>;
   updateMIT(mitId: string, updates: Partial<MIT>): Promise<void>;
   deleteMIT(mitId: string): Promise<void>;
@@ -140,7 +154,7 @@ export interface DataProvider {
   fetchHygieneConfigs(userId: string): Promise<HygieneConfig[]>;
   createHygieneConfig(userId: string, data: Omit<HygieneConfig, 'id' | 'user_id' | 'created_at'>): Promise<HygieneConfig>;
   updateHygieneConfig(configId: string, updates: Partial<HygieneConfig>): Promise<void>;
-  fetchHygieneLogs(userId: string, date: string): Promise<HygieneLog[]>;
+  fetchHygieneLogs(userId: string, date?: string): Promise<HygieneLog[]>;
   createHygieneLog(userId: string, data: Omit<HygieneLog, 'id' | 'user_id' | 'logged_at'>): Promise<HygieneLog>;
 }
 
@@ -493,12 +507,15 @@ const supabaseProvider: DataProvider = {
 
   // ── Summis: MITs ──
   async fetchMITs(userId, date) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('mits')
       .select('id, user_id, date, title, estimated_minutes, actual_minutes, completed, completed_at, sort_order, sprint_id, created_at')
       .eq('user_id', userId)
-      .eq('date', date)
       .order('sort_order', { ascending: true });
+    if (date) {
+      query = query.eq('date', date);
+    }
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []) as MIT[];
   },
@@ -559,12 +576,15 @@ const supabaseProvider: DataProvider = {
   },
 
   async fetchHygieneLogs(userId, date) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('hygiene_logs')
       .select('id, user_id, practice, date, compliant, sprint_id, logged_at')
       .eq('user_id', userId)
-      .eq('date', date)
       .order('logged_at', { ascending: true });
+    if (date) {
+      query = query.eq('date', date);
+    }
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []) as HygieneLog[];
   },
@@ -763,7 +783,8 @@ const mockProvider: DataProvider = {
 
   // ── Summis: MITs ──
   async fetchMITs(_userId, date) {
-    return mockMITs.filter((m) => m.date === date).sort((a, b) => a.sort_order - b.sort_order);
+    const filtered = date ? mockMITs.filter((m) => m.date === date) : mockMITs;
+    return filtered.sort((a, b) => a.sort_order - b.sort_order);
   },
 
   async createMIT(_userId, data) {
@@ -810,7 +831,8 @@ const mockProvider: DataProvider = {
   },
 
   async fetchHygieneLogs(_userId, date) {
-    return mockHygieneLogs.filter((l) => l.date === date);
+    if (date) return mockHygieneLogs.filter((l) => l.date === date);
+    return mockHygieneLogs;
   },
 
   async createHygieneLog(_userId, data) {

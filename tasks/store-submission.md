@@ -1,18 +1,17 @@
 # Summis — App Store Submission Checklist
 
 **Goal:** Ship Summis to App Store and Google Play
-**Status:** Code review complete, P0–P3 fixes applied, needs configuration + account setup
-**Estimated effort:** 3–5 days (mostly non-code work)
+**Status:** All 7 redesign phases code-complete (215 tests, 0 TS errors). Needs configuration + account setup.
+**Estimated effort:** 2–3 days (mostly non-code work)
 
 ---
 
 ## Phase 1: Foundation (Day 1)
 
 ### EAS & Expo Setup
-- [ ] Create Expo account at https://expo.dev if not already done
-- [ ] Run `eas init` in the project root to generate a real project ID
-- [ ] Update `app.json` — replace `"your-eas-project-id"` with the real ID
-- [ ] Update the EAS updates URL with `https://u.expo.dev/<real-id>`
+- [x] Expo account created
+- [x] `eas init` run — project ID `6af066f2-7645-4e29-97fa-ff7bd10357ac`
+- [x] `app.json` configured with real project ID
 - [ ] Verify: `eas whoami` shows your account
 
 ### RevenueCat Setup
@@ -20,37 +19,24 @@
 - [ ] Create a new project in RevenueCat dashboard
 - [ ] Create iOS app in RevenueCat → copy the public API key
 - [ ] Create Android app in RevenueCat → copy the public API key
-- [ ] Add to `.env.local`:
-  ```
-  EXPO_PUBLIC_RC_KEY_IOS=<your-ios-key>
-  EXPO_PUBLIC_RC_KEY_ANDROID=<your-android-key>
-  ```
+- [ ] Add keys to `eas.json` production env vars
 - [ ] Configure products in RevenueCat matching these IDs:
   - `com.summis.pro.monthly` — $7.99/mo
   - `com.summis.pro.annual` — $49.99/yr
   - `com.summis.lifetime` — $79.99 one-time
 - [ ] Create entitlement `pro_access` and attach all 3 products to it
 
-### Production Supabase
-- [ ] Option A: Create a new Supabase project for production (clean slate)
-- [ ] Option B: Reuse existing thousandx project (legacy tables just sit unused)
-- [ ] Copy the project URL and anon key
-- [ ] Run migrations against production: `supabase db push --db-url <production-db-url>`
+### Supabase (using existing project)
 - [ ] Verify all 16 migrations applied (001–016, check Tables tab in Supabase dashboard)
+  - If not: `supabase db push --db-url <your-db-url>`
 - [ ] Set Edge Function secrets in Supabase dashboard (Project Settings → Edge Functions):
   - `ANTHROPIC_API_KEY` — for AI insights (Claude API)
   - `CRON_SECRET` — shared secret for cron job authentication
   - `SUPABASE_ANON_KEY` — needed by edge functions for user-scoped clients
-- [ ] Deploy Edge Functions: `supabase functions deploy --project-ref <prod-ref>`
-- [ ] Run cron.sql in SQL Editor (replace `<YOUR_CRON_SECRET>` with real secret)
+- [ ] Deploy Edge Functions: `supabase functions deploy --project-ref <your-ref>`
+- [ ] Run `cron.sql` in SQL Editor (replace `<YOUR_CRON_SECRET>` with real secret)
 - [ ] Test: call `/functions/v1/performance-score` with a valid JWT to verify it works
-- [ ] Add production env vars to `eas.json` under the `production` profile:
-  ```json
-  "env": {
-    "EXPO_PUBLIC_SUPABASE_URL": "<prod-url>",
-    "EXPO_PUBLIC_SUPABASE_ANON_KEY": "<prod-anon-key>"
-  }
-  ```
+- [ ] Add your Supabase URL + anon key to `eas.json` production env vars
 
 ---
 
@@ -96,7 +82,7 @@
 ## Phase 3: Google Play Setup (Day 1–2, parallel with Phase 2)
 
 ### Google Play Developer Account
-- [ ] Register at https://play.google.com/console ($25 one-time fee)
+- [x] Google Play Developer account already registered
 - [ ] Create a new app:
   - App name: `Summis`
   - Default language: English
@@ -123,9 +109,9 @@
 ## Phase 4: Store Listing Content (Day 2–3)
 
 ### App Icon & Splash Screen
-- [ ] Create Summis app icon (1024×1024) — replace `assets/images/icon.png`
-- [ ] Create Summis splash screen — replace `assets/images/splash-icon.png`
-- [ ] Create adaptive icon for Android — replace `assets/images/adaptive-icon.png`
+- [x] Summis app icon (1024×1024) — `assets/images/icon.png`
+- [x] Summis splash screen — `assets/images/splash-icon.png`
+- [x] Adaptive icon for Android — `assets/images/android-icon-*.png`
 
 ### Privacy Policy
 - [ ] Host the privacy policy at a public HTTPS URL
@@ -208,7 +194,7 @@
 ### Production Build
 - [ ] Run final checks:
   ```bash
-  npm test          # all 206 tests pass
+  npm test          # all 215 tests pass
   npm run typecheck # zero TypeScript errors
   ```
 - [ ] `npm run build:ios` — production iOS build
@@ -286,7 +272,7 @@ supabase db push --db-url <url>       # Push migrations to production
 supabase functions deploy             # Deploy edge functions
 
 # Verify
-npm test                              # Run test suite (206 tests)
+npm test                              # Run test suite (215 tests)
 npm run typecheck                     # TypeScript validation
 ```
 
@@ -301,10 +287,10 @@ All P0–P3 issues from the comprehensive code review have been addressed:
 - **Logic:** Score formula matches CLAUDE.md weights, feature flags work correctly, profile fields read from DB
 - **Compliance:** Account deletion endpoint (GDPR), password strength (8+ chars, letters + numbers), legal text 12px minimum
 - **DB:** Text length constraints on all user-input columns, enum constraints for chronotype + phone placement
-- **Tests:** 206 tests across 17 suites (sprint-protocol, hygiene-engine, subscription-limits, correlation-engine, chronotype, science, date-utils, etc.)
+- **Tests:** 215 tests across 18 suites (sprint-protocol, hygiene-engine, subscription-limits, correlation-engine, hygiene-correlations, chronotype, science, date-utils, etc.)
 - **Accessibility:** Radio groups, checkbox states, progress bars, descriptive labels across 9 components
 - **Design system:** Spacing.ts + Typography.ts constants created
 
 ---
 
-*Last updated: 2026-03-28*
+*Last updated: 2026-04-13*

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import { useSprints } from '@/hooks/useSprints';
+import { useMITs } from '@/hooks/useMITs';
 import { useSubscription } from '@/hooks/useSubscription';
 import { canStartSprint } from '@/lib/features';
 import { SprintIntention } from '@/components/sprint/SprintIntention';
@@ -11,6 +12,7 @@ import { SprintReflection } from '@/components/sprint/SprintReflection';
 import { InterruptionLogger } from '@/components/focus/InterruptionLogger';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
+import { enableDND, disableDND } from '@/lib/dnd-integration';
 import type { SprintPhase } from '@/types/summis';
 
 export default function SprintScreen() {
@@ -26,6 +28,8 @@ export default function SprintScreen() {
     updatePhase,
     setActiveSprint,
   } = useSprints();
+
+  const { todayMITs } = useMITs();
 
   const tier = profile?.subscription_tier ?? 'free';
   const canStart = canStartSprint(tier, todaySprints.length);
@@ -47,6 +51,32 @@ export default function SprintScreen() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
+
+  // Recover incomplete sprint on mount (e.g., app was closed mid-sprint)
+  useEffect(() => {
+    if (activeSprint) return; // Already have an active sprint
+    const incomplete = todaySprints.find((s) => !s.completed && s.started_at);
+    if (!incomplete) return;
+
+    // Calculate remaining time if still in focus phase
+    if (incomplete.phase === 'focus') {
+      const elapsed = Math.floor((Date.now() - new Date(incomplete.started_at).getTime()) / 1000);
+      const totalSeconds = incomplete.duration_minutes * 60;
+      const remaining = totalSeconds - elapsed;
+      if (remaining > 0) {
+        setActiveSprint(incomplete);
+        setSecondsLeft(remaining);
+        startTimer();
+      } else {
+        // Timer would have expired — move to rest
+        setActiveSprint(incomplete);
+        updatePhase(incomplete.id, 'rest');
+      }
+    } else {
+      // Rest or reflection phase — just restore the sprint
+      setActiveSprint(incomplete);
+    }
+  }, [todaySprints.length]); // Only run when sprint list changes (e.g., after data load)
 
   // Timer countdown logic
   useEffect(() => {
@@ -84,7 +114,7 @@ export default function SprintScreen() {
   }, [startTimer]);
 
   // Handle starting a sprint from intention phase
-  async function handleStartSprint(intention: string, hygieneChecks: Record<string, boolean>) {
+  async function handleStartSprint(intention: string, hygieneChecks: Record<string, boolean>, mitId?: string) {
     try {
       const sprint = await startSprint({
         intention,
@@ -92,9 +122,14 @@ export default function SprintScreen() {
         phoneAway: hygieneChecks['phone_away'] ?? false,
         dndEnabled: hygieneChecks['dnd_active'] ?? false,
         environmentReady: hygieneChecks['environment_clear'] ?? false,
+        mitId,
       });
       setSecondsLeft(sprintDuration * 60);
       startTimer();
+      // Enable DND when sprint starts (best-effort)
+      if (hygieneChecks['dnd_active']) {
+        enableDND().catch(console.warn);
+      }
     } catch (err) {
       console.error('Failed to start sprint:', err);
     }
@@ -119,6 +154,8 @@ export default function SprintScreen() {
       interruptions,
       interruptionTypes,
     });
+    // Disable DND when sprint ends (best-effort)
+    disableDND().catch(console.warn);
     // Reset timer state
     setSecondsLeft(0);
     setInterruptions(0);
@@ -159,6 +196,7 @@ export default function SprintScreen() {
         <SprintIntention
           onStart={handleStartSprint}
           hygieneConfigs={hygieneConfigs}
+          todayMITs={todayMITs}
           chronotype={profile?.chronotype as 'am_shifted' | 'bi_phasic' | 'pm_shifted' | undefined}
           wakeTime={profile?.wake_time ?? undefined}
         />

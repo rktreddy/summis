@@ -1,71 +1,58 @@
+import { useMemo } from 'react';
 import { ScrollView, View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import { useSprints } from '@/hooks/useSprints';
+import { useCognitiveScore } from '@/hooks/useCognitiveScore';
+import { useHygieneCorrelations } from '@/hooks/useHygieneCorrelations';
 import { TrendLabel } from '@/components/score/TrendLabel';
 import { CognitivePerformanceChart } from '@/components/score/CognitivePerformanceChart';
 import { HygieneCorrelationCard } from '@/components/score/HygieneCorrelationCard';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/Colors';
 import { canAccess } from '@/lib/features';
-import type { CognitiveScore } from '@/types/summis';
 
 export default function ScoreScreen() {
   const profile = useAppStore((s) => s.profile);
   const sprints = useAppStore((s) => s.sprints);
   const tier = profile?.subscription_tier ?? 'free';
   const { completedToday, sprintStreak } = useSprints();
+  const { dailyScores, last7Scores, avg7Day: currentScore, delta, trend } = useCognitiveScore();
+  const { correlations, hasEnoughData, totalDataDays } = useHygieneCorrelations();
 
-  // Compute simple weekly score from completed sprints
-  const completedSprints = sprints.filter((s) => s.completed);
-  const last7Days = completedSprints.filter((s) => {
-    const sprintDate = new Date(s.date);
+  const completedSprints = useMemo(() => sprints.filter((s) => s.completed), [sprints]);
+
+  // Last 7 days of completed sprints for weekly summary
+  const last7Days = useMemo(() => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    return sprintDate >= weekAgo;
-  });
+    return completedSprints.filter((s) => new Date(s.date) >= weekAgo);
+  }, [completedSprints]);
 
-  // Focus quality: avg self-reported 1-5 → 0-100 scale
-  const avgQuality = last7Days.length > 0
-    ? Math.round(last7Days.reduce((sum, s) => sum + (s.focus_quality ?? 0), 0) / last7Days.length * 20)
-    : 0;
-  // Sprint completion: completed / (target * 7 days) as percentage
-  const dailyTarget = profile?.daily_sprint_target ?? 3;
-  const sprintCompletion = Math.min(Math.round((last7Days.length / (dailyTarget * 7)) * 100), 100);
-  // Hygiene compliance: TODO compute from hygiene logs
-  const hygieneCompliance = 0;
-  // MIT completion: TODO compute from MITs data
-  const mitCompletion = 0;
+  // Sprint quality by time of day
+  const timeOfDayStats = useMemo(() => {
+    const buckets: Record<string, { total: number; count: number }> = {
+      morning: { total: 0, count: 0 },
+      afternoon: { total: 0, count: 0 },
+      evening: { total: 0, count: 0 },
+    };
 
-  // Weighted score per CLAUDE.md formula: sprint 30%, quality 30%, hygiene 25%, MIT 15%
-  const currentScore = Math.min(100, Math.round(
-    sprintCompletion * 0.3 + avgQuality * 0.3 + hygieneCompliance * 0.25 + mitCompletion * 0.15
-  ));
+    for (const sprint of completedSprints) {
+      if (sprint.focus_quality === null) continue;
+      const hour = new Date(sprint.started_at).getHours();
+      const bucket = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+      buckets[bucket].total += sprint.focus_quality;
+      buckets[bucket].count++;
+    }
 
-  // Mock previous week delta for display
-  const delta = 0; // TODO: compute from historical data
-  const trend: 'rising' | 'plateau' | 'declining' =
-    delta > 5 ? 'rising' : delta < -5 ? 'declining' : 'plateau';
+    return Object.entries(buckets).map(([period, data]) => ({
+      period,
+      label: period.charAt(0).toUpperCase() + period.slice(1),
+      avg: data.count > 0 ? data.total / data.count : 0,
+      count: data.count,
+    }));
+  }, [completedSprints]);
 
-  // Build simple score array for chart
-  const scores: CognitiveScore[] = [];
-  const today = new Date();
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
-    const daySprints = completedSprints.filter((s) => s.date === dateStr);
-    const dayQuality = daySprints.length > 0
-      ? Math.round(daySprints.reduce((sum, s) => sum + (s.focus_quality ?? 0), 0) / daySprints.length * 20)
-      : 0;
-    scores.push({
-      date: dateStr,
-      overallScore: dayQuality,
-      sprintScore: Math.min(daySprints.length * 33, 100),
-      hygieneScore: 0, // TODO: compute from hygiene logs
-      consistencyScore: daySprints.length > 0 ? 100 : 0,
-      focusQuality: dayQuality,
-    });
-  }
+  const hasTimeData = timeOfDayStats.some((s) => s.count > 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -91,8 +78,8 @@ export default function ScoreScreen() {
           </View>
         </Card>
 
-        {/* Performance Chart */}
-        <CognitivePerformanceChart scores={scores} />
+        {/* 30-Day Performance Chart */}
+        <CognitivePerformanceChart scores={dailyScores} />
 
         {/* Weekly Summary */}
         <Card style={styles.summaryCard}>
@@ -121,6 +108,43 @@ export default function ScoreScreen() {
           </View>
         </Card>
 
+        {/* Sprint Quality by Time of Day */}
+        {hasTimeData && (
+          <Card style={styles.summaryCard}>
+            <Text style={styles.sectionTitle}>Focus by Time of Day</Text>
+            <View style={styles.timeOfDayRow}>
+              {timeOfDayStats.map((stat) => (
+                <View key={stat.period} style={styles.timeOfDayItem}>
+                  <View style={styles.timeOfDayBar}>
+                    <View
+                      style={[
+                        styles.timeOfDayFill,
+                        {
+                          height: `${Math.min((stat.avg / 5) * 100, 100)}%`,
+                          backgroundColor: stat.avg >= 3.5
+                            ? Colors.success
+                            : stat.avg >= 2.5
+                              ? Colors.warning
+                              : stat.count > 0
+                                ? Colors.danger
+                                : Colors.border,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.timeOfDayAvg}>
+                    {stat.count > 0 ? stat.avg.toFixed(1) : '-'}
+                  </Text>
+                  <Text style={styles.timeOfDayLabel}>{stat.label}</Text>
+                  <Text style={styles.timeOfDayCount}>
+                    {stat.count} sprint{stat.count !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </Card>
+        )}
+
         {/* Correlation Insights (Pro-gated) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hygiene Insights</Text>
@@ -131,15 +155,26 @@ export default function ScoreScreen() {
                 After 30 days of data, Summis will show you which cognitive hygiene practices have the strongest impact on your focus quality. Upgrade to Pro to see your personalized insights.
               </Text>
             </Card>
-          ) : completedSprints.length < 30 ? (
+          ) : !hasEnoughData ? (
             <Card style={styles.lockedCard}>
               <Text style={styles.lockedTitle}>Building Your Data</Text>
               <Text style={styles.lockedText}>
-                {30 - completedSprints.length} more days of sprints needed to compute your hygiene correlations. Keep going!
+                {30 - totalDataDays} more days of sprints needed to compute your hygiene correlations. Keep going!
+              </Text>
+            </Card>
+          ) : correlations.length === 0 ? (
+            <Card style={styles.lockedCard}>
+              <Text style={styles.lockedTitle}>No Strong Correlations Yet</Text>
+              <Text style={styles.lockedText}>
+                We have enough data but haven't found significant links between your hygiene practices and focus quality yet. Keep tracking consistently — patterns often emerge after 60+ days.
               </Text>
             </Card>
           ) : (
-            <Text style={styles.comingSoon}>Correlation insights will appear here</Text>
+            <View style={styles.correlationList}>
+              {correlations.map((corr) => (
+                <HygieneCorrelationCard key={corr.practice} correlation={corr} />
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -226,8 +261,48 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
+  // Time of day breakdown
+  timeOfDayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+  },
+  timeOfDayItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeOfDayBar: {
+    width: 32,
+    height: 60,
+    backgroundColor: Colors.border,
+    borderRadius: 6,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  timeOfDayFill: {
+    width: '100%',
+    borderRadius: 6,
+  },
+  timeOfDayAvg: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  timeOfDayLabel: {
+    fontSize: 13,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  timeOfDayCount: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  // Correlation section
   section: {
     marginTop: 8,
+  },
+  correlationList: {
+    gap: 12,
   },
   lockedCard: {
     borderStyle: 'dashed',
@@ -242,11 +317,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     lineHeight: 20,
-  },
-  comingSoon: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    paddingVertical: 20,
   },
 });

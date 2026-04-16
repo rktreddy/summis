@@ -93,7 +93,14 @@ Deno.serve(async (req: Request) => {
         .gte('started_at', sevenDaysAgo.toISOString());
 
       const completedSprints = sprints ?? [];
-      const dailyTarget = 3; // Default; could fetch from profile
+
+      // Fetch user's daily sprint target from profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('daily_sprint_target')
+        .eq('id', userId)
+        .single();
+      const dailyTarget = profileData?.daily_sprint_target ?? 3;
 
       // Sprint completion score (30%)
       const sprintCompletion = Math.min(

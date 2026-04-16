@@ -25,19 +25,22 @@
         "autoIncrement": true
       },
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "REPLACE_BEFORE_PRODUCTION_BUILD",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "REPLACE_BEFORE_PRODUCTION_BUILD",
-        "EXPO_PUBLIC_RC_KEY_IOS": "REPLACE_BEFORE_PRODUCTION_BUILD",
-        "EXPO_PUBLIC_RC_KEY_ANDROID": "REPLACE_BEFORE_PRODUCTION_BUILD"
+        "EXPO_PUBLIC_SUPABASE_URL": "https://hvoiqhjhaolekzsseqni.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_5RbK9EbBWHAk2fEbPUH2jg_q2Di05IS",
+        "EXPO_PUBLIC_RC_KEY_IOS": "appl_RPrJZSqmHdZqpSreRwOXrPyvkNx",
+        "EXPO_PUBLIC_RC_KEY_ANDROID": "goog_tfesMKuKRToIegjGITTaXPidSCu",
+        "EXPO_PUBLIC_SENTRY_DSN": "REPLACE_BEFORE_PRODUCTION_BUILD",
+        "EXPO_PUBLIC_MIXPANEL_TOKEN": "REPLACE_BEFORE_PRODUCTION_BUILD",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "your-apple-id@email.com",
-        "ascAppId": "your-app-store-connect-app-id",
-        "appleTeamId": "your-team-id"
+        "appleId": "rktreddy@gmail.com",
+        "ascAppId": "6762355111",
+        "appleTeamId": "FC858RSR8A"
       },
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json",

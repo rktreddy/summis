@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { getTodayString } from '@/lib/date-utils';
+import { scheduleStreakReminder } from '@/lib/notifications';
 import type { Sprint, SprintPhase } from '@/types/summis';
 
 export function useSprints() {
@@ -139,6 +140,15 @@ export function useSprints() {
         await data.updateSprint(sprintId, updates);
       } catch (err) {
         setError('Sprint completion saved locally but failed to sync.');
+      }
+
+      // Schedule streak reminder for tomorrow if streak is active
+      const currentStreak = useAppStore.getState().sprints
+        .filter((s) => s.completed)
+        .map((s) => s.date);
+      const uniqueDays = new Set(currentStreak).size;
+      if (uniqueDays > 0) {
+        scheduleStreakReminder('a focus sprint', uniqueDays).catch(console.warn);
       }
     },
     [updateSprint, setActiveSprint, setError, data]

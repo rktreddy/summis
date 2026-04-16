@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +16,7 @@ interface CognitiveHygieneSetupProps {
   onComplete: (config: OnboardingConfig) => void;
 }
 
-type Step = 'welcome' | 'chronotype' | 'energy_preview' | 'phone' | 'sprint' | 'ready';
+type Step = 'welcome' | 'chronotype' | 'energy_preview' | 'notifications' | 'phone' | 'sprint' | 'ready';
 
 const PHONE_OPTIONS: { key: PhonePlacement; label: string; desc: string }[] = [
   { key: 'other_room', label: 'Another Room', desc: 'Highest impact — recommended' },
@@ -24,22 +24,49 @@ const PHONE_OPTIONS: { key: PhonePlacement; label: string; desc: string }[] = [
   { key: 'face_down', label: 'Face Down on Desk', desc: 'Minimum effective distance' },
 ];
 
+const NOTIFICATION_CATEGORIES = [
+  { key: 'social', label: 'Social Media', icon: 'chatbubbles-outline' as const, recommended: true },
+  { key: 'email', label: 'Email', icon: 'mail-outline' as const, recommended: true },
+  { key: 'news', label: 'News & Alerts', icon: 'newspaper-outline' as const, recommended: true },
+  { key: 'shopping', label: 'Shopping', icon: 'cart-outline' as const, recommended: true },
+  { key: 'entertainment', label: 'Entertainment', icon: 'play-outline' as const, recommended: true },
+  { key: 'messaging', label: 'Messaging (non-VIP)', icon: 'chatbox-outline' as const, recommended: false },
+];
+
+/** Generate wake time options from 4:00 to 10:30 in 30-min increments. */
+function getWakeTimeOptions(): string[] {
+  const options: string[] = [];
+  for (let h = 4; h <= 10; h++) {
+    options.push(`${String(h).padStart(2, '0')}:00`);
+    if (h < 10 || (h === 10 && true)) {
+      options.push(`${String(h).padStart(2, '0')}:30`);
+    }
+  }
+  return options;
+}
+
+const WAKE_TIME_OPTIONS = getWakeTimeOptions();
+
 export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps) {
   const [step, setStep] = useState<Step>('welcome');
   const [chronotype, setChronotype] = useState<ChronotypeCategory>('bi_phasic');
+  const [customWakeTime, setCustomWakeTime] = useState<string | null>(null);
+  const [notificationsReviewed, setNotificationsReviewed] = useState<Record<string, boolean>>({});
   const [phonePlacement, setPhonePlacement] = useState<PhonePlacement>('other_room');
   const [sprintDuration, setSprintDuration] = useState<SprintDuration>(DEFAULT_SPRINT_DURATION);
   const [dailyTarget, setDailyTarget] = useState(3);
 
   const ctDef = CHRONOTYPE_DEFINITIONS.find((d) => d.key === chronotype)!;
-  const profile = computeChronotypeProfile(chronotype, ctDef.wakeTimeDefault);
-  const energyWindows = computeEnergyWindows(chronotype, ctDef.wakeTimeDefault);
+  const wakeTime = customWakeTime ?? ctDef.wakeTimeDefault;
+
+  const profile = useMemo(() => computeChronotypeProfile(chronotype, wakeTime), [chronotype, wakeTime]);
+  const energyWindows = useMemo(() => computeEnergyWindows(chronotype, wakeTime), [chronotype, wakeTime]);
 
   function handleComplete() {
     const dipWindow = energyWindows.find((w) => w.phase === 'dip');
     onComplete({
       chronotype,
-      wakeTime: ctDef.wakeTimeDefault,
+      wakeTime,
       peakWindowStart: profile.peakWindowStart,
       peakWindowEnd: profile.peakWindowEnd,
       afternoonWindowStart: dipWindow?.startTime ?? profile.peakWindowEnd,
@@ -54,9 +81,26 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
     });
   }
 
-  const steps: Step[] = ['welcome', 'chronotype', 'energy_preview', 'phone', 'sprint', 'ready'];
+  function openSystemSettings() {
+    if (Platform.OS === 'ios') {
+      Linking.openURL('app-settings:');
+    } else {
+      Linking.openSettings();
+    }
+  }
+
+  const steps: Step[] = ['welcome', 'chronotype', 'energy_preview', 'notifications', 'phone', 'sprint', 'ready'];
   const currentIndex = steps.indexOf(step);
   const progress = (currentIndex + 1) / steps.length;
+
+  // Step numbering (welcome and ready don't count as numbered steps)
+  const numberedSteps: Step[] = ['chronotype', 'energy_preview', 'notifications', 'phone', 'sprint'];
+  const stepNumber = numberedSteps.indexOf(step) + 1;
+  const totalSteps = numberedSteps.length;
+
+  function goBack() {
+    if (currentIndex > 0) setStep(steps[currentIndex - 1]);
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,7 +129,7 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
         {/* Chronotype Selection */}
         {step === 'chronotype' && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepLabel}>STEP 1 OF 4</Text>
+            <Text style={styles.stepLabel}>STEP {stepNumber} OF {totalSteps}</Text>
             <Text style={styles.stepTitle}>What's your chronotype?</Text>
             <Text style={styles.stepText}>
               Your chronotype is your biological energy pattern — it determines when your brain is naturally sharpest and when it needs rest.
@@ -95,7 +139,10 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
                 <TouchableOpacity
                   key={ct.key}
                   style={[styles.option, chronotype === ct.key && styles.optionActive]}
-                  onPress={() => setChronotype(ct.key)}
+                  onPress={() => {
+                    setChronotype(ct.key);
+                    setCustomWakeTime(null); // Reset to default for new chronotype
+                  }}
                   accessibilityLabel={ct.label}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: chronotype === ct.key }}
@@ -120,17 +167,41 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
             <View style={{ marginTop: 12 }}>
               <Button title="Next" onPress={() => setStep('energy_preview')} />
             </View>
+            <BackButton onPress={goBack} />
           </View>
         )}
 
-        {/* Energy Phase Preview */}
+        {/* Energy Phase Preview + Wake Time */}
         {step === 'energy_preview' && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepLabel}>STEP 2 OF 4</Text>
+            <Text style={styles.stepLabel}>STEP {stepNumber} OF {totalSteps}</Text>
             <Text style={styles.stepTitle}>Your energy pattern</Text>
             <Text style={styles.stepText}>
               Based on your {ctDef.label} chronotype, here are your daily energy phases. Summis will use these to coach you on when to sprint and what type of work to do.
             </Text>
+
+            {/* Wake time selector */}
+            <View style={styles.wakeTimeSection}>
+              <Text style={styles.subLabel}>When do you usually wake up?</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.wakeTimeScroll}>
+                <View style={styles.wakeTimeRow}>
+                  {WAKE_TIME_OPTIONS.map((t) => (
+                    <TouchableOpacity
+                      key={t}
+                      style={[styles.wakeTimeBtn, wakeTime === t && styles.wakeTimeBtnActive]}
+                      onPress={() => setCustomWakeTime(t)}
+                      accessibilityLabel={`Wake time ${t}`}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: wakeTime === t }}
+                    >
+                      <Text style={[styles.wakeTimeText, wakeTime === t && styles.wakeTimeTextActive]}>
+                        {t}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
 
             <View style={styles.energyPhaseList}>
               {energyWindows.map((w, i) => {
@@ -178,22 +249,80 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
             )}
 
             <View style={{ marginTop: 12 }}>
+              <Button title="Next" onPress={() => setStep('notifications')} />
+            </View>
+            <BackButton onPress={goBack} />
+          </View>
+        )}
+
+        {/* Notification Audit */}
+        {step === 'notifications' && (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepLabel}>STEP {stepNumber} OF {totalSteps}</Text>
+            <Text style={styles.stepTitle}>Notification audit</Text>
+            <Text style={styles.stepText}>
+              Notifications are the #1 reason phones capture your attention. Each one pulls focus — even if you don't act on it.
+            </Text>
+            <Text style={styles.stepText}>
+              Review these categories and disable non-essential notifications in your phone's settings.
+            </Text>
+
+            <View style={styles.notifList}>
+              {NOTIFICATION_CATEGORIES.map((cat) => {
+                const reviewed = notificationsReviewed[cat.key] ?? false;
+                return (
+                  <TouchableOpacity
+                    key={cat.key}
+                    style={styles.notifItem}
+                    onPress={() => setNotificationsReviewed((prev) => ({ ...prev, [cat.key]: !prev[cat.key] }))}
+                    accessibilityLabel={`${cat.label}: ${reviewed ? 'reviewed' : 'not reviewed'}`}
+                    accessibilityRole="checkbox"
+                  >
+                    <Ionicons
+                      name={cat.icon}
+                      size={20}
+                      color={reviewed ? Colors.success : Colors.textSecondary}
+                    />
+                    <Text style={[styles.notifLabel, reviewed && styles.notifLabelDone]}>
+                      {cat.label}
+                    </Text>
+                    {cat.recommended && !reviewed && (
+                      <View style={styles.disableBadge}>
+                        <Text style={styles.disableBadgeText}>Disable</Text>
+                      </View>
+                    )}
+                    {reviewed && (
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={styles.settingsLink}
+              onPress={openSystemSettings}
+              accessibilityLabel="Open system notification settings"
+            >
+              <Ionicons name="settings-outline" size={18} color={Colors.accent} />
+              <Text style={styles.settingsLinkText}>Open notification settings</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.notifHint}>
+              Keep notifications only for VIP contacts and essential apps. You can always adjust this later.
+            </Text>
+
+            <View style={{ marginTop: 12 }}>
               <Button title="Next" onPress={() => setStep('phone')} />
             </View>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => setStep('chronotype')}
-              accessibilityLabel="Go back to chronotype selection"
-            >
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
+            <BackButton onPress={goBack} />
           </View>
         )}
 
         {/* Phone Placement */}
         {step === 'phone' && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepLabel}>STEP 3 OF 4</Text>
+            <Text style={styles.stepLabel}>STEP {stepNumber} OF {totalSteps}</Text>
             <Text style={styles.stepTitle}>Where will your phone go?</Text>
             <Text style={styles.stepText}>
               Research shows that even a silent, face-down phone on your desk reduces your working memory and fluid intelligence (Ward et al., 2017).
@@ -218,13 +347,14 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
             <View style={{ marginTop: 12 }}>
               <Button title="Next" onPress={() => setStep('sprint')} />
             </View>
+            <BackButton onPress={goBack} />
           </View>
         )}
 
         {/* Sprint Config */}
         {step === 'sprint' && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepLabel}>STEP 4 OF 4</Text>
+            <Text style={styles.stepLabel}>STEP {stepNumber} OF {totalSteps}</Text>
             <Text style={styles.stepTitle}>Set your sprint schedule</Text>
             <Text style={styles.stepText}>
               A focus sprint is a timed block of deep work with a clear intention. Based on Dr. Yousef's protocol: set intention, focus, rest, reflect.
@@ -270,6 +400,7 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
             <View style={{ marginTop: 12 }}>
               <Button title="Next" onPress={() => setStep('ready')} />
             </View>
+            <BackButton onPress={goBack} />
           </View>
         )}
 
@@ -285,6 +416,12 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
                 </Text>
               </View>
               <View style={styles.summaryRow}>
+                <Ionicons name="alarm-outline" size={16} color={Colors.textSecondary} />
+                <Text style={styles.summaryItem}>
+                  Wake time: {wakeTime}
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
                 <Ionicons name="flash-outline" size={16} color="#4CAF50" />
                 <Text style={styles.summaryItem}>
                   Peak: {profile.peakWindowStart} — {profile.peakWindowEnd}
@@ -294,6 +431,12 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
                 <Ionicons name="cafe-outline" size={16} color={Colors.warning} />
                 <Text style={styles.summaryItem}>
                   Caffeine: {profile.caffeineEarliest} — {profile.caffeineCutoff}
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Ionicons name="notifications-off-outline" size={16} color={Colors.accent} />
+                <Text style={styles.summaryItem}>
+                  Notifications: {Object.values(notificationsReviewed).filter(Boolean).length} categories reviewed
                 </Text>
               </View>
               <View style={styles.summaryRow}>
@@ -318,10 +461,23 @@ export function CognitiveHygieneSetup({ onComplete }: CognitiveHygieneSetupProps
             <View style={{ marginTop: 12 }}>
               <Button title="Start using Summis" onPress={handleComplete} />
             </View>
+            <BackButton onPress={goBack} />
           </View>
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function BackButton({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      style={styles.backButton}
+      onPress={onPress}
+      accessibilityLabel="Go back"
+    >
+      <Text style={styles.backButtonText}>Back</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -405,6 +561,39 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 20,
   },
+  // Wake time selector
+  wakeTimeSection: {
+    gap: 8,
+  },
+  wakeTimeScroll: {
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
+  },
+  wakeTimeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  wakeTimeBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  wakeTimeBtnActive: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent + '20',
+  },
+  wakeTimeText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
+  wakeTimeTextActive: {
+    color: Colors.accent,
+    fontWeight: '700',
+  },
   // Energy Phase cards
   energyPhaseList: {
     gap: 12,
@@ -471,6 +660,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     lineHeight: 18,
+  },
+  // Notification audit
+  notifList: {
+    gap: 2,
+  },
+  notifItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  notifLabel: {
+    fontSize: 16,
+    color: Colors.text,
+    flex: 1,
+  },
+  notifLabelDone: {
+    color: Colors.success,
+  },
+  disableBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: Colors.danger + '20',
+  },
+  disableBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.danger,
+  },
+  settingsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.accent + '40',
+  },
+  settingsLinkText: {
+    fontSize: 15,
+    color: Colors.accent,
+    fontWeight: '600',
+  },
+  notifHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
   // Summary
   summaryCard: {
