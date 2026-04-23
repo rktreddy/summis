@@ -1,12 +1,34 @@
-import { ScrollView, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { ScrollView, Text, StyleSheet, SafeAreaView, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 
 const EFFECTIVE_DATE = 'March 28, 2026';
 const CONTACT_EMAIL = 'privacy@summis.app';
 
 export default function PrivacyPolicyScreen() {
+  const router = useRouter();
+
+  function handleClose() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleClose}
+          style={styles.closeBtn}
+          accessibilityLabel="Close privacy policy"
+          accessibilityRole="button"
+        >
+          <Ionicons name="close" size={28} color={Colors.text} />
+        </TouchableOpacity>
+      </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Privacy Policy</Text>
         <Text style={styles.date}>Effective Date: {EFFECTIVE_DATE}</Text>
@@ -151,6 +173,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  closeBtn: {
+    padding: 8,
   },
   scroll: {
     padding: 20,
