@@ -31,8 +31,12 @@ jobs:
 
       - name: Publish OTA update (production)
         if: github.ref == 'refs/heads/main'
-        run: eas update --branch production --message "${{ github.event.head_commit.message }}"
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: eas update --branch production --message "$COMMIT_MSG"
 
       - name: Publish OTA update (preview)
         if: github.ref == 'refs/heads/dev'
-        run: eas update --branch preview --message "${{ github.event.head_commit.message }}"
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: eas update --branch preview --message "$COMMIT_MSG"
