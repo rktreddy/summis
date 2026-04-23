@@ -3,7 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { initRevenueCat } from '@/lib/revenuecat';
+import { initRevenueCat, configureRevenueCat } from '@/lib/revenuecat';
 import { initErrorLogging, setUser, clearUser } from '@/lib/error-logging';
 import { useAppStore } from '@/store/useAppStore';
 import { DataProviderRoot, useData } from '@/lib/data-provider';
@@ -81,6 +81,10 @@ function RootLayoutInner() {
     // Real mode: use Supabase auth
     const { supabase } = require('@/lib/supabase');
 
+    // Configure RevenueCat once at startup so getOfferings works even
+    // when the user signs in after the initial session check.
+    configureRevenueCat().catch(console.warn);
+
     supabase.auth.getSession().then(({ data: { session: s } }: { data: { session: { user: { id: string } } | null } }) => {
       setSession(s ? { user: { id: s.user.id } } : null);
       if (s) {
@@ -102,6 +106,7 @@ function RootLayoutInner() {
         fetchProfile(s.user.id);
         fetchSummisData(s.user.id);
         setUser(s.user.id);
+        initRevenueCat(s.user.id).catch(console.warn);
       } else {
         setProfile(null);
         clearUser();

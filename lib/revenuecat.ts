@@ -11,7 +11,11 @@ export const PRODUCT_IDS = {
   lifetime: 'com.summis.lifetime',
 } as const;
 
-export async function initRevenueCat(userId: string): Promise<void> {
+let configured = false;
+
+export async function configureRevenueCat(): Promise<boolean> {
+  if (configured) return true;
+
   const apiKey =
     Platform.OS === 'ios'
       ? process.env.EXPO_PUBLIC_RC_KEY_IOS ?? ''
@@ -19,10 +23,17 @@ export async function initRevenueCat(userId: string): Promise<void> {
 
   if (!apiKey) {
     console.warn('RevenueCat API key not set. Subscriptions will not work.');
-    return;
+    return false;
   }
 
   await Purchases.configure({ apiKey });
+  configured = true;
+  return true;
+}
+
+export async function initRevenueCat(userId: string): Promise<void> {
+  const ready = await configureRevenueCat();
+  if (!ready) return;
   await Purchases.logIn(userId);
 }
 
