@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { restorePurchases } from '@/lib/revenuecat';
@@ -25,9 +25,76 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { profile, session } = useAppStore();
   const [showPaywall, setShowPaywall] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+  }
+
+  async function performDelete() {
+    setDeleting(true);
+    try {
+      const { data: { session: current } } = await supabase.auth.getSession();
+      const accessToken = current?.access_token;
+      if (!accessToken) {
+        throw new Error('Not signed in.');
+      }
+
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+      const response = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: anonKey,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const rawBody = await response.text();
+      if (!response.ok) {
+        let message = `Delete failed (${response.status})`;
+        try {
+          const parsed = JSON.parse(rawBody);
+          if (parsed?.error) message = parsed.error;
+        } catch {
+          if (rawBody) message = `${message}: ${rawBody.slice(0, 200)}`;
+        }
+        throw new Error(message);
+      }
+
+      // Sign out locally — the server already invalidated the auth user
+      await supabase.auth.signOut();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Delete failed';
+      Alert.alert('Delete failed', `${message}\n\nPlease try again or contact support.`);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Delete Account?',
+      'This permanently deletes your account and all associated data (sprints, MITs, hygiene logs, preferences). This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Permanently',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you sure?',
+              'This is your last chance. Tap Delete to permanently remove your account.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: performDelete },
+              ]
+            );
+          },
+        },
+      ]
+    );
   }
 
   const tier = profile?.subscription_tier ?? 'free';
@@ -38,7 +105,12 @@ export default function ProfileScreen() {
         <Text style={styles.title}>Profile</Text>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        alwaysBounceVertical
+        showsVerticalScrollIndicator
+      >
         <Card style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
@@ -128,7 +200,19 @@ export default function ProfileScreen() {
           style={styles.signOutBtn}
           accessibilityLabel="Sign out"
         />
-      </View>
+
+        <Button
+          title={deleting ? 'Deleting…' : 'Delete Account'}
+          onPress={handleDeleteAccount}
+          variant="danger"
+          style={styles.deleteBtn}
+          loading={deleting}
+          accessibilityLabel="Delete account permanently"
+        />
+        <Text style={styles.deleteHelpText}>
+          Permanently deletes your account and all associated data. This cannot be undone.
+        </Text>
+      </ScrollView>
 
       <PaywallModal
         visible={showPaywall}
@@ -153,8 +237,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.text,
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: 20,
+    paddingBottom: 100,
   },
   profileCard: {
     alignItems: 'center',
@@ -226,5 +314,16 @@ const styles = StyleSheet.create({
   },
   signOutBtn: {
     marginBottom: 12,
+  },
+  deleteBtn: {
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  deleteHelpText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
   },
 });

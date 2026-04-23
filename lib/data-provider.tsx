@@ -592,7 +592,10 @@ const supabaseProvider: DataProvider = {
   async createHygieneLog(userId, data) {
     const { data: log, error } = await supabase
       .from('hygiene_logs')
-      .insert({ user_id: userId, ...data })
+      .upsert(
+        { user_id: userId, ...data, logged_at: new Date().toISOString() },
+        { onConflict: 'user_id,practice,date' }
+      )
       .select('id, user_id, practice, date, compliant, sprint_id, logged_at')
       .single();
     if (error) throw new Error(error.message);
@@ -836,13 +839,20 @@ const mockProvider: DataProvider = {
   },
 
   async createHygieneLog(_userId, data) {
+    const existingIdx = mockHygieneLogs.findIndex(
+      (l) => l.practice === data.practice && l.date === data.date
+    );
     const log: HygieneLog = {
-      id: `hl-${Date.now()}`,
+      id: existingIdx >= 0 ? mockHygieneLogs[existingIdx].id : `hl-${Date.now()}`,
       user_id: 'demo-user-001',
       ...data,
       logged_at: new Date().toISOString(),
     };
-    mockHygieneLogs.push(log);
+    if (existingIdx >= 0) {
+      mockHygieneLogs[existingIdx] = log;
+    } else {
+      mockHygieneLogs.push(log);
+    }
     return log;
   },
 };

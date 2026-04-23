@@ -114,6 +114,15 @@ export default function SprintScreen() {
     startTimer();
   }, [startTimer]);
 
+  const endSprintEarly = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setIsRunning(false);
+    setSecondsLeft(0);
+    if (activeSprint) {
+      updatePhase(activeSprint.id, 'reflection');
+    }
+  }, [activeSprint, updatePhase]);
+
   // Handle starting a sprint from intention phase
   async function handleStartSprint(intention: string, hygieneChecks: Record<string, boolean>, mitId?: string) {
     if (isStarting) return;
@@ -221,6 +230,7 @@ export default function SprintScreen() {
           interruptions={interruptions}
           onPause={pauseTimer}
           onResume={resumeTimer}
+          onEndEarly={endSprintEarly}
         />
         <InterruptionLogger
           visible={showInterruptionLogger}

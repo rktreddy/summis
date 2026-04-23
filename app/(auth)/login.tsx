@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
@@ -43,11 +44,21 @@ export default function LoginScreen() {
 
   async function handleAppleSignIn() {
     try {
+      // Supabase verifies the Apple id-token by hashing this nonce and
+      // comparing it to the `nonce` claim inside the signed JWT. The same
+      // raw value must be sent to Apple and to Supabase.
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      );
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       });
 
       if (credential.identityToken) {
@@ -55,6 +66,7 @@ export default function LoginScreen() {
         const { error: authError } = await supabase.auth.signInWithIdToken({
           provider: 'apple',
           token: credential.identityToken,
+          nonce: rawNonce,
         });
         setLoading(false);
 

@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import * as Crypto from 'expo-crypto';
 import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { getTodayString } from '@/lib/date-utils';
@@ -96,7 +97,7 @@ export function useSprints() {
 
       // Optimistic: add to store immediately
       const optimisticSprint: Sprint = {
-        id: crypto.randomUUID(),
+        id: Crypto.randomUUID(),
         user_id: userId,
         ...sprintData,
       };

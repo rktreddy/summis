@@ -10,6 +10,7 @@ interface SprintTimerProps {
   interruptions: number;
   onPause: () => void;
   onResume: () => void;
+  onEndEarly: () => void;
 }
 
 export function SprintTimer({
@@ -20,6 +21,7 @@ export function SprintTimer({
   interruptions,
   onPause,
   onResume,
+  onEndEarly,
 }: SprintTimerProps) {
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
@@ -70,6 +72,13 @@ export function SprintTimer({
             accessibilityLabel="Resume sprint"
           />
         )}
+        <Button
+          title="End Sprint Early"
+          onPress={onEndEarly}
+          variant="outline"
+          style={styles.endEarlyBtn}
+          accessibilityLabel="End sprint early and reflect"
+        />
       </View>
 
       <Text style={styles.encouragement}>
@@ -134,6 +143,9 @@ const styles = StyleSheet.create({
   controls: {
     marginBottom: 32,
     minWidth: 160,
+  },
+  endEarlyBtn: {
+    marginTop: 12,
   },
   encouragement: {
     fontSize: 14,

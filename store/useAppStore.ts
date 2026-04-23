@@ -36,7 +36,7 @@ interface AppState {
   setHygieneConfigs: (configs: HygieneConfig[]) => void;
   hygieneLogs: HygieneLog[];
   setHygieneLogs: (logs: HygieneLog[]) => void;
-  addHygieneLog: (log: HygieneLog) => void;
+  upsertHygieneLog: (log: HygieneLog) => void;
 
   // Active sprint tracking
   activeSprint: Sprint | null;
@@ -107,8 +107,18 @@ export const useAppStore = create<AppState>()(
       setHygieneConfigs: (hygieneConfigs) => set({ hygieneConfigs }),
       hygieneLogs: [],
       setHygieneLogs: (hygieneLogs) => set({ hygieneLogs }),
-      addHygieneLog: (log) =>
-        set((state) => ({ hygieneLogs: [...state.hygieneLogs, log] })),
+      upsertHygieneLog: (log) =>
+        set((state) => {
+          const existingIdx = state.hygieneLogs.findIndex(
+            (l) => l.user_id === log.user_id && l.practice === log.practice && l.date === log.date
+          );
+          if (existingIdx === -1) {
+            return { hygieneLogs: [...state.hygieneLogs, log] };
+          }
+          const next = state.hygieneLogs.slice();
+          next[existingIdx] = { ...next[existingIdx], ...log };
+          return { hygieneLogs: next };
+        }),
 
       // Active sprint
       activeSprint: null,

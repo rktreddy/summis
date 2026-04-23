@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as Crypto from 'expo-crypto';
 import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { useMITs } from '@/hooks/useMITs';
@@ -22,7 +23,7 @@ export default function TodayScreen() {
   const profile = useAppStore((s) => s.profile);
   const session = useAppStore((s) => s.session);
   const hygieneConfigs = useAppStore((s) => s.hygieneConfigs);
-  const addHygieneLog = useAppStore((s) => s.addHygieneLog);
+  const upsertHygieneLog = useAppStore((s) => s.upsertHygieneLog);
   const data = useData();
 
   const { todayMITs, canAddMIT, createMIT, toggleMIT, deleteMIT, maxMITs } = useMITs();
@@ -59,12 +60,12 @@ export default function TodayScreen() {
 
     const logData = { practice, date: todayStr, compliant: newCompliant, sprint_id: null as string | null };
     const optimisticLog = {
-      id: crypto.randomUUID(),
+      id: alreadyLogged?.id ?? Crypto.randomUUID(),
       user_id: userId,
       logged_at: new Date().toISOString(),
       ...logData,
     };
-    addHygieneLog(optimisticLog);
+    upsertHygieneLog(optimisticLog);
 
     try {
       await data.createHygieneLog(userId, logData);
@@ -102,8 +103,18 @@ export default function TodayScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>{greeting}, {displayName}</Text>
-          <Text style={styles.date}>{todayFormatted}</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.greeting}>{greeting}, {displayName}</Text>
+            <Text style={styles.date}>{todayFormatted}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/profile')}
+            style={styles.profileButton}
+            accessibilityLabel="Open profile"
+            accessibilityRole="button"
+          >
+            <Ionicons name="person-circle-outline" size={32} color={Colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         {/* Cognitive Hygiene Score + Checklist */}
@@ -247,6 +258,16 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerText: {
+    flex: 1,
+  },
+  profileButton: {
+    padding: 4,
+    marginLeft: 12,
   },
   greeting: {
     fontSize: 26,

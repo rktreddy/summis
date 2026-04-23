@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import * as Crypto from 'expo-crypto';
 import { useAppStore } from '@/store/useAppStore';
 import { useData } from '@/lib/data-provider';
 import { getTodayString } from '@/lib/date-utils';
@@ -44,7 +45,7 @@ export function useMITs() {
 
       // Optimistic: add to store immediately
       const optimisticMIT: MIT = {
-        id: crypto.randomUUID(),
+        id: Crypto.randomUUID(),
         user_id: userId,
         ...mitData,
         actual_minutes: null,
