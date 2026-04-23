@@ -7,11 +7,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Linking,
 } from 'react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { getOfferings, purchasePackage, restorePurchases } from '@/lib/revenuecat';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
+
+const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+const PRIVACY_URL = 'https://summis.app/privacy';
 
 interface PaywallModalProps {
   visible: boolean;
@@ -34,6 +38,8 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState('');
+  const [loadingOfferings, setLoadingOfferings] = useState(false);
+  const [offeringsError, setOfferingsError] = useState('');
 
   useEffect(() => {
     if (visible) {
@@ -42,11 +48,26 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
   }, [visible]);
 
   async function loadOfferings() {
-    const pkgs = await getOfferings();
-    setPackages(pkgs);
-    // Default to annual if available
-    const annualIdx = pkgs.findIndex((p) => p.identifier === '$rc_annual');
-    if (annualIdx >= 0) setSelectedIndex(annualIdx);
+    setLoadingOfferings(true);
+    setOfferingsError('');
+    try {
+      const pkgs = await getOfferings();
+      setPackages(pkgs);
+      if (pkgs.length === 0) {
+        setOfferingsError(
+          'Subscriptions are temporarily unavailable. Please check your connection and try again.'
+        );
+      } else {
+        const annualIdx = pkgs.findIndex((p) => p.identifier === '$rc_annual');
+        if (annualIdx >= 0) setSelectedIndex(annualIdx);
+      }
+    } catch {
+      setOfferingsError(
+        'Unable to load subscription options. Please try again.'
+      );
+    } finally {
+      setLoadingOfferings(false);
+    }
   }
 
   async function handlePurchase() {
@@ -147,8 +168,20 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
                   );
                 })}
               </View>
-            ) : (
+            ) : loadingOfferings ? (
               <ActivityIndicator color={Colors.accent} style={styles.loader} />
+            ) : (
+              <View style={styles.offeringsErrorBox}>
+                <Text style={styles.offeringsErrorText}>
+                  {offeringsError || 'Subscriptions are temporarily unavailable.'}
+                </Text>
+                <TouchableOpacity
+                  onPress={loadOfferings}
+                  accessibilityLabel="Retry loading subscriptions"
+                >
+                  <Text style={styles.retryText}>Tap to retry</Text>
+                </TouchableOpacity>
+              </View>
             )}
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -176,6 +209,22 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
               automatically renews unless cancelled at least 24 hours before the
               end of the current period. Manage subscriptions in Settings.
             </Text>
+
+            <View style={styles.legalLinksRow}>
+              <TouchableOpacity
+                onPress={() => Linking.openURL(TERMS_URL)}
+                accessibilityLabel="Open Terms of Use"
+              >
+                <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalLinkSeparator}>·</Text>
+              <TouchableOpacity
+                onPress={() => Linking.openURL(PRIVACY_URL)}
+                accessibilityLabel="Open Privacy Policy"
+              >
+                <Text style={styles.legalLink}>Privacy Policy</Text>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </View>
       </View>
@@ -322,5 +371,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  legalLinksRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  legalLink: {
+    color: Colors.accent,
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  legalLinkSeparator: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginHorizontal: 8,
+  },
+  offeringsErrorBox: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 12,
+    alignItems: 'center',
+  },
+  offeringsErrorText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  retryText: {
+    color: Colors.accent,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
