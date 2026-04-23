@@ -13,6 +13,8 @@ import type { PurchasesPackage } from 'react-native-purchases';
 import { getOfferings, purchasePackage, restorePurchases } from '@/lib/revenuecat';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
+import { useAppStore } from '@/store/useAppStore';
+import { PRODUCT_IDS } from '@/lib/revenuecat';
 
 const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 const PRIVACY_URL = 'https://summis.app/privacy';
@@ -76,10 +78,21 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
     setError('');
 
     try {
-      const { success } = await purchasePackage(packages[selectedIndex]);
+      const pkg = packages[selectedIndex];
+      const { success } = await purchasePackage(pkg);
       if (success) {
+        // Mirror the RevenueCat entitlement into local profile state so
+        // the UI reflects Pro immediately. The authoritative tier update
+        // happens server-side via RevenueCat webhook → Supabase.
+        const tier = pkg.product.identifier === PRODUCT_IDS.lifetime ? 'lifetime' : 'pro';
+        const current = useAppStore.getState().profile;
+        if (current) {
+          useAppStore.getState().setProfile({ ...current, subscription_tier: tier });
+        }
         onPurchased();
         onClose();
+      } else {
+        setError('Purchase did not complete. If you were charged, tap Restore Purchases.');
       }
     } catch {
       setError('Purchase failed. Please try again.');
@@ -95,6 +108,10 @@ export function PaywallModal({ visible, onClose, onPurchased }: PaywallModalProp
     try {
       const restored = await restorePurchases();
       if (restored) {
+        const current = useAppStore.getState().profile;
+        if (current && current.subscription_tier === 'free') {
+          useAppStore.getState().setProfile({ ...current, subscription_tier: 'pro' });
+        }
         onPurchased();
         onClose();
       } else {

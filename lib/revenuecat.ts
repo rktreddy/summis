@@ -49,6 +49,20 @@ export async function checkProAccess(): Promise<boolean> {
   }
 }
 
+export async function getActiveTier(): Promise<'free' | 'pro' | 'lifetime' | null> {
+  try {
+    const customerInfo = await Purchases.getCustomerInfo();
+    const active = customerInfo.entitlements.active[ENTITLEMENTS.pro];
+    if (!active) return 'free';
+    const productId = active.productIdentifier;
+    if (productId === PRODUCT_IDS.lifetime) return 'lifetime';
+    return 'pro';
+  } catch (err) {
+    console.error('RevenueCat getActiveTier failed:', err);
+    return null;
+  }
+}
+
 export async function getOfferings(): Promise<PurchasesPackage[]> {
   try {
     const offerings = await Purchases.getOfferings();

@@ -3,7 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { initRevenueCat, configureRevenueCat } from '@/lib/revenuecat';
+import { initRevenueCat, configureRevenueCat, getActiveTier } from '@/lib/revenuecat';
 import { initErrorLogging, setUser, clearUser } from '@/lib/error-logging';
 import { useAppStore } from '@/store/useAppStore';
 import { DataProviderRoot, useData } from '@/lib/data-provider';
@@ -126,6 +126,15 @@ function RootLayoutInner() {
         const newProfile = await data.createProfile(userId, 'User');
         if (newProfile) {
           setProfile(newProfile);
+        }
+      }
+      // Mirror RevenueCat entitlement into local profile tier in case a
+      // previous purchase's webhook hasn't reached Supabase yet.
+      const rcTier = await getActiveTier();
+      if (rcTier && rcTier !== 'free') {
+        const current = useAppStore.getState().profile;
+        if (current && current.subscription_tier === 'free') {
+          setProfile({ ...current, subscription_tier: rcTier });
         }
       }
     } catch (err) {
