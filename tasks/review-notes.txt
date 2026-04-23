@@ -1,0 +1,31 @@
+RESUBMISSION addressing prior rejection (2.1.0, 5.1.1).
+
+2.1.0 PERFORMANCE - App Completeness
+The previous build crashed on launch due to a Sentry native module initialization issue. The Sentry native plugin has been removed and error logging hardened. The app now launches reliably on cold start. Apple Sign-In was also failing silently because the id-token nonce was missing - fixed in this build.
+
+5.1.1 PRIVACY - Account Deletion
+Users can now permanently delete their account and all associated data: Profile (icon top-right on Today tab) -> scroll -> Delete Account -> confirm both alerts -> returns to login. The full flow is shown in the attached video.
+
+DEMO ACCOUNT
+Email: review@summis.app
+Password: ReviewSummis2026!
+Sign-up with any email is also fully functional.
+
+HOW TO TEST
+1. Log in with the demo account.
+2. Complete the cognitive-hygiene onboarding (defaults fine).
+3. Today tab -> tap Start Sprint, or open the Sprint tab. Sprint has 4 phases: Intention -> Focus -> Rest -> Reflection. Use the 30-minute preset for testing. End Sprint Early is available on the timer.
+4. Score tab shows performance after a completed sprint.
+5. Profile -> Delete Account to test the deletion flow.
+
+LOW DAILY USAGE BY DESIGN
+Summis is a cognitive-performance coach, not an engagement app. It is designed for under 5 minutes of daily interaction. Short session times are an intentional product goal.
+
+SUBSCRIPTIONS (RevenueCat)
+Free / Pro Monthly $7.99 / Pro Annual $49.99 / Lifetime $79.99 one-time. Restore Purchases is available in the paywall and Profile. Required Apple legal text (terms, auto-renewal disclosure, privacy link) appears in the paywall.
+
+AI INSIGHTS (Pro, optional)
+Sends anonymized sprint and hygiene data to Anthropic's Claude API for personalized analysis. No PII transmitted. User-initiated only - never runs automatically.
+
+PRIVACY POLICY
+https://summis.app/privacy - also linked from login, signup, and Profile.

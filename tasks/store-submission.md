@@ -1,7 +1,36 @@
 # Summis — App Store Submission Checklist
 
 **Goal:** Ship Summis to App Store and Google Play
-**Status:** All 7 redesign phases code-complete (215 tests, 0 TS errors). Needs configuration + account setup.
+**Status:** iOS v1.0.0 build 6 SUBMITTED, **Waiting for Review** as of 2026-04-22 22:41 PT. Android still pending.
+
+---
+
+## Current Submission State (2026-04-22)
+
+**iOS — Waiting for Review**
+- App Store Connect App ID: `6762355111`
+- Bundle: `com.summis.app`
+- Version: 1.0.0, Build 6 (auto-incremented from 5)
+- Submission ID: `64e540ee-ccb6-4b4a-8a52-b9ad4df45d0b`
+- EAS build URL: https://expo.dev/accounts/rktreddy/projects/summis/builds/22014e8d-4504-485d-92b5-55a4189fb0ab
+- Reviewer credentials: `review@summis.app` / `ReviewSummis2026!`
+- Demo video attached: `~/Desktop/delete-account-demo.mov`
+- Review notes: `tasks/review-notes.txt`
+
+**Previous rejection reasons addressed in this resubmission:**
+- **2.1.0 Performance / App Completeness** — launch crash from Sentry native plugin (removed in `6c70cfa`); Apple Sign-In silently failing without nonce (fixed)
+- **5.1.1 Privacy / Data Collection** — account deletion flow added (Profile → Delete Account, backed by `delete-account` Edge Function)
+
+**Production database:**
+- Supabase project: `hvoiqhjhaolekzsseqni`
+- Migrations 001–019 all applied (017, 018, 019 pushed 2026-04-22)
+- Migration 019 fixes the chronotype constraint that was blocking onboarding writes
+- Edge Functions deployed: `delete-account` (with `--no-verify-jwt` due to new asymmetric JWTs), `ai-insights`, `performance-score`, `weekly-report`
+- Secrets set: `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `CRON_SECRET`, `SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_DB_URL`
+
+---
+
+**Original status:** All 7 redesign phases code-complete (215 tests, 0 TS errors). Needs configuration + account setup.
 **Estimated effort:** 2–3 days (mostly non-code work)
 
 ---
@@ -12,70 +41,36 @@
 - [x] Expo account created
 - [x] `eas init` run — project ID `6af066f2-7645-4e29-97fa-ff7bd10357ac`
 - [x] `app.json` configured with real project ID
-- [ ] Verify: `eas whoami` shows your account
+- [x] `eas whoami` verified
 
 ### RevenueCat Setup
-- [ ] Create RevenueCat account at https://www.revenuecat.com
-- [ ] Create a new project in RevenueCat dashboard
-- [ ] Create iOS app in RevenueCat → copy the public API key
-- [ ] Create Android app in RevenueCat → copy the public API key
-- [ ] Add keys to `eas.json` production env vars
-- [ ] Configure products in RevenueCat matching these IDs:
-  - `com.summis.pro.monthly` — $7.99/mo
-  - `com.summis.pro.annual` — $49.99/yr
-  - `com.summis.lifetime` — $79.99 one-time
-- [ ] Create entitlement `pro_access` and attach all 3 products to it
+- [x] RevenueCat account + project created
+- [x] iOS + Android apps created, keys added to `eas.json`
+- [x] Products configured: `com.summis.pro.monthly`, `com.summis.pro.annual`, `com.summis.lifetime`
+- [x] Entitlement `pro_access` attached to all 3 products
 
-### Supabase (using existing project)
-- [ ] Verify all 16 migrations applied (001–016, check Tables tab in Supabase dashboard)
-  - If not: `supabase db push --db-url <your-db-url>`
-- [ ] Set Edge Function secrets in Supabase dashboard (Project Settings → Edge Functions):
-  - `ANTHROPIC_API_KEY` — for AI insights (Claude API)
-  - `CRON_SECRET` — shared secret for cron job authentication
-  - `SUPABASE_ANON_KEY` — needed by edge functions for user-scoped clients
-- [ ] Deploy Edge Functions: `supabase functions deploy --project-ref <your-ref>`
-- [ ] Run `cron.sql` in SQL Editor (replace `<YOUR_CRON_SECRET>` with real secret)
-- [ ] Test: call `/functions/v1/performance-score` with a valid JWT to verify it works
-- [ ] Add your Supabase URL + anon key to `eas.json` production env vars
+### Supabase (project: hvoiqhjhaolekzsseqni)
+- [x] All 19 migrations applied (017, 018, 019 pushed 2026-04-22)
+- [x] Edge Function secrets set (`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `CRON_SECRET`, `SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_DB_URL`)
+- [x] Edge Functions deployed: `delete-account` (with `--no-verify-jwt`, see lessons.md), `ai-insights`, `performance-score`, `weekly-report`
+- [ ] Verify `cron.sql` applied (pg_cron schedules)
+- [x] Supabase URL + anon key in `eas.json` production env
 
 ---
 
 ## Phase 2: Apple Developer Setup (Day 1–2)
 
 ### Apple Developer Account
-- [ ] Enroll in Apple Developer Program ($99/year) at https://developer.apple.com
-- [ ] Wait for approval (can take 24–48 hours)
-- [ ] Note your **Team ID** (Account → Membership → Team ID)
+- [x] Apple Developer Program enrollment active (Team `FC858RSR8A`)
 
 ### App Store Connect
-- [ ] Create a new app in App Store Connect (https://appstoreconnect.apple.com)
-  - Bundle ID: `com.summis.app`
-  - Name: `Summis`
-  - Primary language: English
-  - Category: Health & Fitness (or Productivity)
-- [ ] Note the **App Store Connect App ID** (numeric, shown in the URL or General → App Information)
-- [ ] Update `eas.json` submission config:
-  ```json
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "<your-apple-id-email>",
-        "ascAppId": "<app-store-connect-app-id>",
-        "appleTeamId": "<your-team-id>"
-      }
-    }
-  }
-  ```
+- [x] App created (ID `6762355111`, bundle `com.summis.app`)
+- [x] `eas.json` submission config populated
 
 ### In-App Purchases (Apple)
-- [ ] In App Store Connect → In-App Purchases, create 3 subscriptions:
-  - `com.summis.pro.monthly` — Auto-renewable, $7.99
-  - `com.summis.pro.annual` — Auto-renewable, $49.99
-  - `com.summis.lifetime` — Non-consumable, $79.99
-- [ ] Create a subscription group called "Summis Pro"
-- [ ] Add the monthly and annual subscriptions to the group
-- [ ] Connect App Store Connect to RevenueCat (shared secret)
-- [ ] Verify products appear in RevenueCat dashboard
+- [x] 3 IAPs created (`com.summis.pro.monthly`, `com.summis.pro.annual`, `com.summis.lifetime`)
+- [x] Subscription group "Summis Pro" set up
+- [x] App Store Connect ↔ RevenueCat connected, products verified
 
 ---
 
@@ -205,18 +200,13 @@
 
 ## Phase 6: Submit (Day 4–5)
 
-### iOS Submission
-- [ ] `npm run submit:ios` — uploads to App Store Connect
-- [ ] In App Store Connect:
-  - [ ] Add screenshots to all required device sizes
-  - [ ] Fill in description, subtitle, keywords
-  - [ ] Set age rating (4+)
-  - [ ] Add privacy policy URL
-  - [ ] Add demo account in App Review Information
-  - [ ] Select pricing (Free with In-App Purchases)
-  - [ ] Submit for review
-- [ ] Wait for review (typically 24–48 hours)
-- [ ] If rejected: read the rejection reason, fix, resubmit
+### iOS Submission (Resubmission Apr 22 2026)
+- [x] `npm run build:ios` — build 6 finished
+- [x] `npm run submit:ios --id 22014e8d-...` — uploaded to ASC
+- [x] In ASC: build 6 selected, screenshots present, description/keywords/subtitle filled, privacy URL set, reviewer credentials updated to `review@summis.app`, video attached, notes pasted from `tasks/review-notes.txt`
+- [x] Submitted for review at 2026-04-22 22:41 PT (Submission ID `64e540ee-...`)
+- [ ] **Awaiting Apple review decision** — check ASC for status changes, expect email
+- [ ] If rejected: address per rejection code, iterate
 
 ### Android Submission
 - [ ] `npm run submit:android` — uploads to Google Play Console

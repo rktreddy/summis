@@ -391,17 +391,22 @@ EXPO_PUBLIC_MIXPANEL_TOKEN=      # Scaffolded
 - TypeScript strict mode — zero errors
 - All features implemented and wired end-to-end
 
-### Remaining (External Setup)
-- [ ] Supabase: verify migrations applied, deploy Edge Functions, set secrets
-- [ ] RevenueCat account + product configuration
-- [ ] Apple Developer account + App Store Connect setup
-- [x] Google Play Developer account (already registered)
-- [ ] Google Play Console: create app, billing products, service account
-- [ ] Device testing + screenshots
-- [ ] TestFlight beta → App Store / Play Store submission
+### Live Status (2026-04-22)
+- **iOS:** v1.0.0 build 6 submitted, **Waiting for Review** (resubmission addressing 2.1.0 + 5.1.1 rejections; demo video attached for account-deletion flow). Submission ID `64e540ee-ccb6-4b4a-8a52-b9ad4df45d0b`. ASC App ID `6762355111`.
+- **Android:** still pending — Google Play Console app not yet created, no build run.
+- **Supabase:** prod project `hvoiqhjhaolekzsseqni`. All 19 migrations applied. Edge Functions deployed (`delete-account` requires `--no-verify-jwt` due to new asymmetric JWT keys — see `tasks/lessons.md`).
+- **RevenueCat:** configured with all 3 products + `pro_access` entitlement; iOS keys live in `eas.json`.
+
+### Remaining
+- [ ] Apple review decision (in flight)
+- [ ] Address any rejection (iterate)
+- [ ] Android: create Play Console app, billing products, service account, run build, submit
+- [ ] Sentry + Mixpanel reactivation post-launch (env vars currently empty in `eas.json`)
 
 See `SUMMIS-REDESIGN-PLAN.md` for detailed implementation plan.
 See `tasks/smoke-test.md` for pre-submission testing checklist.
+See `tasks/store-submission.md` for current submission state and credentials.
+See `tasks/lessons.md` for technical gotchas (Supabase JWT, expo-crypto, Apple nonce, etc.).
 
 ---
 
