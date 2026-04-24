@@ -1,10 +1,15 @@
-RESUBMISSION addressing prior rejection (2.1.0, 5.1.1).
+RESUBMISSION addressing prior rejection where in-app purchases completed but did not grant Pro access.
 
-2.1.0 PERFORMANCE - App Completeness
-The previous build crashed on launch due to a Sentry native module initialization issue. The Sentry native plugin has been removed and error logging hardened. The app now launches reliably on cold start. Apple Sign-In was also failing silently because the id-token nonce was missing - fixed in this build.
+WHAT WAS FIXED
+The app checked for an entitlement named "pro_access" but our RevenueCat configuration uses "Summis Pro". After a successful purchase the receipt was validated correctly, but the client-side check failed to recognize the entitlement, so the UI remained on the Free tier. The identifier is now aligned. Purchases flip the tier to Pro immediately and Restore Purchases works end-to-end.
 
-5.1.1 PRIVACY - Account Deletion
-Users can now permanently delete their account and all associated data: Profile (icon top-right on Today tab) -> scroll -> Delete Account -> confirm both alerts -> returns to login. The full flow is shown in the attached video.
+ATTACHED VIDEO (full IAP flow)
+1. Sign in with demo account
+2. Complete onboarding
+3. Subscribe to Pro Annual ($49.99) - paywall, sandbox confirm, tier flips to Pro
+4. Tap Manage Subscription - deep-links to iOS Settings > Subscriptions where the user can cancel (Apple-approved cancellation path - in-app cancellation is not permitted)
+5. Subscribe to Pro Monthly ($7.99) - verifies the purchase path works for the second product
+6. Sign out
 
 DEMO ACCOUNT
 Email: review@summis.app
@@ -14,15 +19,23 @@ Sign-up with any email is also fully functional.
 HOW TO TEST
 1. Log in with the demo account.
 2. Complete the cognitive-hygiene onboarding (defaults fine).
-3. Today tab -> tap Start Sprint, or open the Sprint tab. Sprint has 4 phases: Intention -> Focus -> Rest -> Reflection. Use the 30-minute preset for testing. End Sprint Early is available on the timer.
-4. Score tab shows performance after a completed sprint.
-5. Profile -> Delete Account to test the deletion flow.
+3. Profile (icon top-right on Today tab) > Upgrade to Pro > complete sandbox purchase. Tier badge flips to Pro immediately.
+4. Profile > Manage Subscription to test the iOS Settings deep-link.
+5. Profile > Restore Purchases to verify the restore flow.
+6. Profile > Delete Account to test the permanent deletion flow (covered in the previous resubmission; still functional in this build).
+
+ACCOUNT DELETION (addressed in prior resubmission, still fully functional)
+Profile > Delete Account > confirm both alerts > returns to login. The Edge Function cascades the deletion across all user data.
 
 LOW DAILY USAGE BY DESIGN
 Summis is a cognitive-performance coach, not an engagement app. It is designed for under 5 minutes of daily interaction. Short session times are an intentional product goal.
 
 SUBSCRIPTIONS (RevenueCat)
-Free / Pro Monthly $7.99 / Pro Annual $49.99 / Lifetime $79.99 one-time. Restore Purchases is available in the paywall and Profile. Required Apple legal text (terms, auto-renewal disclosure, privacy link) appears in the paywall.
+Free / Pro Monthly $7.99 / Pro Annual $49.99 / Lifetime $79.99 one-time. Restore Purchases is available in the paywall and Profile. Required Apple legal text (terms, auto-renewal disclosure, privacy link) appears in the paywall. Manage Subscription (iOS Settings deep-link) is available in Profile for Pro users - Apple does not permit in-app cancellation.
+
+TERMS OF USE (EULA) - STANDARD APPLE
+App Description includes the standard Apple Terms of Use (EULA) link: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+This link is also visible inside the app on the paywall screen alongside the Privacy Policy link.
 
 AI INSIGHTS (Pro, optional)
 Sends anonymized sprint and hygiene data to Anthropic's Claude API for personalized analysis. No PII transmitted. User-initiated only - never runs automatically.

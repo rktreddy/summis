@@ -64,6 +64,9 @@ Based on peer-reviewed research from Ward, Duke, Gneezy & Bos (2017), Dr. Sahar 
 
 Summis: Latin for "at the peak."
 
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://summis.app/privacy
+
 ---
 
 ### Promotional Text (max 170 characters, can be updated without new build)
