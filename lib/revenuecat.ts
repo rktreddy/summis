@@ -2,7 +2,7 @@ import Purchases, { type CustomerInfo, type PurchasesPackage } from 'react-nativ
 import { Platform } from 'react-native';
 
 export const ENTITLEMENTS = {
-  pro: 'pro_access',
+  pro: 'Summis Pro',
 } as const;
 
 export const PRODUCT_IDS = {
