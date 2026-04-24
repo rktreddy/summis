@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { restorePurchases } from '@/lib/revenuecat';
+import { restorePurchases, getActiveTier } from '@/lib/revenuecat';
 import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -26,9 +26,45 @@ export default function ProfileScreen() {
   const { profile, session } = useAppStore();
   const [showPaywall, setShowPaywall] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+  }
+
+  async function handleRestore() {
+    setRestoring(true);
+    try {
+      const restored = await restorePurchases();
+      if (restored) {
+        const tier = await getActiveTier();
+        const current = useAppStore.getState().profile;
+        if (current && tier && tier !== 'free') {
+          useAppStore.getState().setProfile({ ...current, subscription_tier: tier });
+        }
+        Alert.alert('Purchases Restored', 'Your Pro subscription is active on this device.');
+      } else {
+        Alert.alert(
+          'No Active Subscription',
+          "We couldn't find an active subscription on this Apple ID. If you were charged, make sure you're signed into the same Apple ID used to purchase."
+        );
+      }
+    } catch {
+      Alert.alert('Restore Failed', 'Please try again or contact support@summis.app.');
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  async function handleManageSubscription() {
+    try {
+      await Linking.openURL('itms-apps://apps.apple.com/account/subscriptions');
+    } catch {
+      Alert.alert(
+        'Unable to open Settings',
+        'Open the App Store app → your profile → Subscriptions to manage or cancel.'
+      );
+    }
   }
 
   async function performDelete() {
@@ -172,14 +208,20 @@ export default function ProfileScreen() {
           />
         )}
 
+        {tier === 'pro' && (
+          <Button
+            title="Manage Subscription"
+            onPress={handleManageSubscription}
+            variant="secondary"
+            style={styles.restoreBtn}
+            accessibilityLabel="Manage or cancel subscription in App Store"
+          />
+        )}
+
         <Button
-          title="Restore Purchases"
-          onPress={async () => {
-            const restored = await restorePurchases();
-            if (!restored) {
-              // Could show an alert here
-            }
-          }}
+          title={restoring ? 'Restoring…' : 'Restore Purchases'}
+          onPress={handleRestore}
+          loading={restoring}
           variant="secondary"
           style={styles.restoreBtn}
           accessibilityLabel="Restore purchases"
